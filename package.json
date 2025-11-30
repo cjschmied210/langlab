@@ -11,11 +11,9 @@
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
-    "@types/react-beautiful-dnd": "^13.1.8",
     "firebase": "^12.6.0",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
-    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6"
   },
