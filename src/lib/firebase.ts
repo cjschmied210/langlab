@@ -5,13 +5,12 @@ import { getFunctions } from "firebase/functions";
 
 // TODO: Replace with your Firebase project configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCDcwJQxiLYLvg7IoEWWWkyAy7vlK9wvCU",
-  authDomain: "schmiedap.firebaseapp.com",
-  projectId: "schmiedap",
-  storageBucket: "schmiedap.firebasestorage.app",
-  messagingSenderId: "838315921448",
-  appId: "1:838315921448:web:2921bc107fbc64b26a651d",
-  measurementId: "G-JBHDEB6VF0"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
