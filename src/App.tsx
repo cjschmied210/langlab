@@ -1,0 +1,55 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Layout } from './components/Layout';
+import { Home } from './pages/Home';
+import { TextReader } from './features/reader/TextReader';
+import { TeacherDashboard } from './features/dashboard/TeacherDashboard';
+import { StudentDashboard } from './features/dashboard/StudentDashboard';
+import { Login } from './pages/Login';
+import { Onboarding } from './pages/Onboarding';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="reader" element={<TextReader />} />
+
+            <Route
+              path="teacher/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="student/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'teacher']}>
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;
