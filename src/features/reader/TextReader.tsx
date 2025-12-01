@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc, collection, addDoc, query, where, onSnapshot, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, where, onSnapshot, deleteDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SAMPLE_TEXT } from './data';
@@ -123,6 +123,29 @@ export const TextReader: React.FC = () => {
         });
 
         return () => unsubscribe();
+    }, [id, user]);
+
+    // Fetch Existing Submission (SPACECAT)
+    useEffect(() => {
+        const fetchSubmission = async () => {
+            if (!id || !user) return;
+            try {
+                const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
+                const docSnap = await getDoc(submissionRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.spacecat) {
+                        setSpacecatData(data.spacecat as SpacecatData);
+                        setPhase('annotation');
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching submission:", error);
+            }
+        };
+
+        fetchSubmission();
     }, [id, user]);
 
     // Helper to get absolute offset relative to the container
@@ -380,8 +403,25 @@ export const TextReader: React.FC = () => {
             return;
         }
 
-        setIsValidating(false);
-        setPhase('annotation');
+        // Save to Firestore
+        try {
+            const submissionRef = doc(db, 'submissions', `${user!.uid}_${id}`);
+            await setDoc(submissionRef, {
+                userId: user!.uid,
+                assignmentId: id,
+                spacecat: spacecatData,
+                status: 'started',
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            setPhase('annotation');
+        } catch (error) {
+            console.error("Error saving progress:", error);
+            alert("Could not save your progress, but you can proceed.");
+            setPhase('annotation');
+        } finally {
+            setIsValidating(false);
+        }
     };
 
     const handleParagraphComplete = (paragraph: any) => {
