@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, X, ArrowRight, Sparkles, CheckCircle2, Eraser } from 'lucide-react';
+import { GripVertical, X, ArrowRight, Sparkles, CheckCircle2, Eraser, BookOpen } from 'lucide-react';
 import { RHETORICAL_VERBS } from '../reader/data';
 
 interface ThesisBuilderProps {
@@ -15,7 +15,7 @@ interface ThesisState {
     purpose: string;
 }
 
-// Academic Zen Color Palette for Categories
+// "Academic Zen" Color Palette for Categories
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
     "Comparison": { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },      // Blue
     "Emphasis": { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" },        // Amber
@@ -44,10 +44,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
         setIsDragging(true);
     };
 
-    const handleDragEnd = () => {
-        setIsDragging(false);
-    };
-
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
     };
@@ -68,31 +64,32 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
         setThesis(prev => ({ ...prev, [slot]: null }));
     };
 
-    // Deduplicate verbs
     const uniqueVerbs = Array.from(new Set(availableVerbs));
 
-    // Interactive Slot Component
-    const VerbSlot = ({ slot, label }: { slot: 'verb1' | 'verb2', label: string }) => {
+    // Component for a Drop Zone
+    const VerbSlot = ({ slot, label, number }: { slot: 'verb1' | 'verb2', label: string, number: number }) => {
         const currentVerb = thesis[slot];
         const style = currentVerb ? getVerbStyle(currentVerb) : null;
 
         return (
-            <div className="flex flex-col items-center gap-2 relative group">
-                <div className="text-xs font-bold text-muted uppercase tracking-widest">{label}</div>
+            <div className="flex flex-col gap-2 relative group flex-1">
+                <div className="text-xs font-bold text-muted uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px]">{number}</span>
+                    {label}
+                </div>
                 <div
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, slot)}
                     style={{
-                        minWidth: '160px',
-                        height: '50px',
                         backgroundColor: currentVerb ? style?.bg : (isDragging ? '#f0f9ff' : 'transparent'),
                         borderColor: currentVerb ? style?.border : (isDragging ? 'var(--color-primary)' : 'var(--color-border)'),
                         color: currentVerb ? style?.text : 'var(--color-text-muted)',
-                        borderWidth: '2px',
-                        borderStyle: currentVerb ? 'solid' : 'dashed',
-                        transition: 'all 0.2s ease'
+                        borderStyle: currentVerb ? 'solid' : 'dashed'
                     }}
-                    className="rounded-lg flex items-center justify-center font-medium cursor-default relative"
+                    className={`
+                        h-14 rounded-lg border-2 flex items-center justify-center font-medium cursor-default relative transition-all
+                        ${!currentVerb && !isDragging ? 'hover:border-primary/50 hover:bg-gray-50' : ''}
+                    `}
                 >
                     {currentVerb ? (
                         <>
@@ -105,7 +102,7 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                             </button>
                         </>
                     ) : (
-                        <span className="text-sm opacity-50">Drop Verb Here</span>
+                        <span className="text-sm opacity-40 pointer-events-none">Drop Verb Here</span>
                     )}
                 </div>
             </div>
@@ -113,143 +110,140 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
     };
 
     return (
-        <div style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '450px',
-            backgroundColor: '#ffffff',
-            borderTop: '1px solid var(--color-border)',
-            boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
-            zIndex: 500,
-            display: 'flex',
-            flexDirection: 'column',
-            animation: 'slideUp 0.3s ease-out'
-        }}>
-            {/* Header */}
-            <div className="flex justify-between items-center p-6 border-b border-border bg-background/50 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                        <Sparkles size={20} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div
+                className="bg-surface w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20"
+                style={{ maxWidth: '1100px' }}
+            >
+                {/* Header */}
+                <div className="flex justify-between items-center p-6 border-b border-border bg-background">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                            <Sparkles size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold font-serif text-primary">Thesis Constructor</h2>
+                            <p className="text-sm text-muted">Assemble your argument using your collected evidence.</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-lg font-bold font-serif text-primary">Thesis Constructor</h3>
-                        <p className="text-xs text-muted">Drag collected verbs to build your argument structure.</p>
-                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-muted/10 rounded-full transition-colors text-muted">
+                        <X size={24} />
+                    </button>
                 </div>
-                <button onClick={onClose} className="p-2 hover:bg-muted/10 rounded-full transition-colors text-muted">
-                    <X size={20} />
-                </button>
-            </div>
 
-            <div className="flex h-full overflow-hidden">
+                <div className="flex flex-1 overflow-hidden">
 
-                {/* LEFT: Source Verbs */}
-                <div className="w-72 border-r border-border p-6 overflow-y-auto bg-background/30">
-                    <h4 className="text-xs font-bold text-muted uppercase mb-4 flex items-center gap-2">
-                        <GripVertical size={14} />
-                        Evidence Bank
-                    </h4>
-                    <div className="flex flex-col gap-2">
-                        {uniqueVerbs.length === 0 ? (
-                            <div className="text-center p-8 border-2 border-dashed border-border rounded-lg text-muted text-sm">
-                                No annotations yet. <br />Highlight text to collect verbs.
-                            </div>
-                        ) : (
-                            uniqueVerbs.map(verb => {
-                                const style = getVerbStyle(verb);
-                                return (
-                                    <div
-                                        key={verb}
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, verb)}
-                                        onDragEnd={handleDragEnd}
-                                        style={{
-                                            backgroundColor: style.bg,
-                                            borderColor: style.border,
-                                            color: style.text
-                                        }}
-                                        className="p-3 rounded-md border cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all flex items-center justify-between group"
-                                    >
-                                        <span className="font-medium">{verb}</span>
-                                        <GripVertical size={14} className="opacity-0 group-hover:opacity-50" />
+                    {/* LEFT SIDEBAR: Evidence Bank */}
+                    <div className="w-80 bg-background/50 border-r border-border flex flex-col">
+                        <div className="p-4 border-b border-border bg-white/50">
+                            <h4 className="text-xs font-bold text-muted uppercase flex items-center gap-2">
+                                <BookOpen size={14} />
+                                Available Verbs ({uniqueVerbs.length})
+                            </h4>
+                        </div>
+
+                        <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                            {uniqueVerbs.length === 0 ? (
+                                <div className="text-center p-8 border-2 border-dashed border-border rounded-lg text-muted text-sm">
+                                    <p>No annotations yet.</p>
+                                    <p className="text-xs mt-2">Highlight text in the reader to collect rhetorical verbs.</p>
+                                </div>
+                            ) : (
+                                uniqueVerbs.map(verb => {
+                                    const style = getVerbStyle(verb);
+                                    return (
+                                        <div
+                                            key={verb}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, verb)}
+                                            className="p-3 rounded-md border cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all flex items-center justify-between group bg-white"
+                                            style={{
+                                                borderLeftColor: style.border,
+                                                borderLeftWidth: '4px'
+                                            }}
+                                        >
+                                            <span className="font-medium text-sm" style={{ color: style.text }}>{verb}</span>
+                                            <GripVertical size={14} className="text-muted/30" />
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* MAIN AREA: Builder Canvas */}
+                    <div className="flex-1 flex flex-col bg-white relative">
+
+                        {/* Live Preview Banner */}
+                        <div className="bg-primary/5 border-b border-primary/10 p-6 text-center sticky top-0 z-10">
+                            <p className="text-xs font-bold text-primary/40 uppercase tracking-widest mb-2">Live Preview</p>
+                            <p className="font-serif text-xl text-primary/90 leading-relaxed">
+                                <span className="font-bold">{authorName}</span> begins by
+                                <span className={`mx-1 px-1 rounded ${thesis.verb1 ? 'bg-primary/10 font-bold' : 'opacity-40 italic'}`}>
+                                    {thesis.verb1 ? `${thesis.verb1}ing` : "[verb]"}
+                                </span>
+                                , then shifts to
+                                <span className={`mx-1 px-1 rounded ${thesis.verb2 ? 'bg-primary/10 font-bold' : 'opacity-40 italic'}`}>
+                                    {thesis.verb2 ? `${thesis.verb2}ing` : "[verb]"}
+                                </span>
+                                {' '}in order to{' '}
+                                <span className={`mx-1 px-1 rounded ${thesis.purpose ? 'bg-primary/10 font-bold' : 'opacity-40 italic'}`}>
+                                    {thesis.purpose || "[state purpose]"}
+                                </span>.
+                            </p>
+                        </div>
+
+                        {/* The "Machine" */}
+                        <div className="flex-1 flex flex-col items-center justify-center p-12 gap-12 overflow-y-auto">
+
+                            {/* Step 1: The Strategy */}
+                            <div className="w-full max-w-3xl">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="text-xs font-bold text-muted uppercase tracking-widest">Speaker</div>
+                                        <div className="h-14 px-6 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-700 shadow-sm">
+                                            {authorName}
+                                        </div>
                                     </div>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
 
-                {/* RIGHT: Construction Zone */}
-                <div className="flex-1 flex flex-col relative">
-                    {/* Live Preview Banner */}
-                    <div className="bg-primary/5 border-b border-primary/10 p-4 text-center">
-                        <p className="font-serif text-lg text-primary/80 leading-relaxed max-w-3xl mx-auto">
-                            <span className="font-bold text-primary">{authorName}</span> begins by
-                            <span className={thesis.verb1 ? "font-bold mx-1 border-b-2 border-primary" : "opacity-50 italic mx-1"}>
-                                {thesis.verb1 ? `${thesis.verb1}ing` : "[verb]"}
-                            </span>
-                            , then shifts to
-                            <span className={thesis.verb2 ? "font-bold mx-1 border-b-2 border-primary" : "opacity-50 italic mx-1"}>
-                                {thesis.verb2 ? `${thesis.verb2}ing` : "[verb]"}
-                            </span>
-                            {' '}in order to{' '}
-                            <span className={thesis.purpose ? "font-bold border-b-2 border-primary" : "opacity-50 italic"}>
-                                {thesis.purpose || "[purpose]"}
-                            </span>.
-                        </p>
-                    </div>
-
-                    {/* Builder Canvas */}
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 gap-8">
-
-                        {/* The Flow */}
-                        <div className="flex items-center gap-4 w-full max-w-4xl justify-center">
-
-                            {/* Author Block (Static) */}
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="text-xs font-bold text-muted uppercase tracking-widest">Speaker</div>
-                                <div className="h-[50px] px-6 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-700 shadow-sm">
-                                    {authorName}
+                                    <ArrowRight className="text-muted/20 shrink-0" size={32} />
+                                    <VerbSlot slot="verb1" label="Initial Strategy" number={1} />
+                                    <ArrowRight className="text-muted/20 shrink-0" size={32} />
+                                    <VerbSlot slot="verb2" label="Shift / Evolution" number={2} />
                                 </div>
                             </div>
 
-                            <ArrowRight className="text-muted/30" size={24} />
-
-                            {/* Verb 1 Slot */}
-                            <VerbSlot slot="verb1" label="Strategy 1" />
-
-                            <ArrowRight className="text-muted/30" size={24} />
-
-                            {/* Verb 2 Slot */}
-                            <VerbSlot slot="verb2" label="Strategy 2" />
-
-                            <ArrowRight className="text-muted/30" size={24} />
-
-                            {/* Purpose Input */}
-                            <div className="flex flex-col items-center gap-2 flex-1 max-w-xs">
-                                <div className="text-xs font-bold text-muted uppercase tracking-widest">Universal Purpose</div>
-                                <input
-                                    type="text"
-                                    value={thesis.purpose}
-                                    onChange={(e) => setThesis(prev => ({ ...prev, purpose: e.target.value }))}
-                                    placeholder="convey [message]..."
-                                    className="w-full h-[50px] px-4 bg-transparent border-b-2 border-primary/30 focus:border-primary outline-none text-center font-serif text-lg placeholder:text-muted/30 transition-colors"
-                                />
+                            {/* Step 2: The Purpose */}
+                            <div className="w-full max-w-2xl p-6 bg-background/50 rounded-xl border border-border border-dashed">
+                                <div className="text-xs font-bold text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px]">3</span>
+                                    Universal Purpose
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg font-serif italic text-muted">...in order to</span>
+                                    <input
+                                        type="text"
+                                        value={thesis.purpose}
+                                        onChange={(e) => setThesis(prev => ({ ...prev, purpose: e.target.value }))}
+                                        placeholder="convey [message] to the audience..."
+                                        className="flex-1 bg-transparent border-b-2 border-primary/20 focus:border-primary outline-none py-2 font-serif text-lg placeholder:text-muted/30 transition-colors"
+                                        autoComplete="off"
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Action Bar */}
-                        <div className="mt-8">
-                            <button
-                                onClick={handleSave}
-                                disabled={!thesis.verb1 || !thesis.verb2 || !thesis.purpose}
-                                className="btn btn-primary px-8 py-3 text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-                            >
-                                <CheckCircle2 size={20} />
-                                Finalize Thesis
-                            </button>
+                            {/* Action Buttons */}
+                            <div className="mt-auto pt-8">
+                                <button
+                                    onClick={handleSave}
+                                    disabled={!thesis.verb1 || !thesis.verb2 || !thesis.purpose}
+                                    className="btn btn-primary px-10 py-3 text-lg shadow-lg hover:shadow-primary/20 hover:-translate-y-1 transition-all flex items-center gap-2 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none rounded-full"
+                                >
+                                    <CheckCircle2 size={20} />
+                                    Finalize & Save Thesis
+                                </button>
+                            </div>
+
                         </div>
                     </div>
                 </div>
