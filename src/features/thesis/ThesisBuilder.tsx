@@ -109,8 +109,8 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
 
     return (
         <div
-            className="absolute bottom-0 left-0 right-0 bg-surface border-t border-primary/20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-50 flex flex-col animate-in slide-in-from-bottom-10 duration-300"
-            style={{ height: '400px', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50 }}
+            className="absolute bottom-0 left-0 right-[340px] bg-surface border-t border-primary/20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-50 flex flex-col animate-in slide-in-from-bottom-10 duration-300"
+            style={{ height: '400px', position: 'absolute', bottom: 0, left: 0, right: '340px', zIndex: 50 }}
         >
             {/* Header / Close Bar */}
             <div className="flex justify-between items-center px-6 py-2 bg-background border-b border-border">
