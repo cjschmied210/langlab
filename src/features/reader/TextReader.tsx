@@ -524,7 +524,7 @@ export const TextReader: React.FC = () => {
                                                 onChange={handleSpacecatChange}
                                                 placeholder={field.placeholder}
                                                 rows={2}
-                                                className="w-full bg-transparent border-none p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans focus:ring-0 resize-none leading-relaxed"
+                                                className="w-full bg-transparent border-none outline-none focus:ring-0 p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans resize-none shadow-none appearance-none leading-relaxed"
                                             />
                                         ) : (
                                             <input
@@ -534,7 +534,7 @@ export const TextReader: React.FC = () => {
                                                 value={spacecatData[field.id as keyof SpacecatData]}
                                                 onChange={handleSpacecatChange}
                                                 placeholder={field.placeholder}
-                                                className="w-full bg-transparent border-none p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans focus:ring-0"
+                                                className="w-full bg-transparent border-none outline-none focus:ring-0 p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans resize-none shadow-none appearance-none"
                                             />
                                         )}
                                     </div>
