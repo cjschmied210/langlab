@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock, X } from 'lucide-react';
 
 interface SpacecatData {
     speaker: string;
@@ -14,9 +14,10 @@ interface SpacecatData {
 
 interface SpacecatModalProps {
     onUnlock: (data: SpacecatData) => void;
+    onClose: () => void;
 }
 
-export const SpacecatModal: React.FC<SpacecatModalProps> = ({ onUnlock }) => {
+export const SpacecatModal: React.FC<SpacecatModalProps> = ({ onUnlock, onClose }) => {
     const [formData, setFormData] = useState<SpacecatData>({
         speaker: '',
         purpose: '',
@@ -61,8 +62,24 @@ export const SpacecatModal: React.FC<SpacecatModalProps> = ({ onUnlock }) => {
                 maxHeight: '90vh',
                 overflowY: 'auto',
                 boxShadow: 'var(--shadow-lg)',
-                border: '1px solid var(--color-primary)'
+                border: '1px solid var(--color-primary)',
+                position: 'relative'
             }}>
+                <button
+                    onClick={onClose}
+                    style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-text-muted)'
+                    }}
+                >
+                    <X size={24} />
+                </button>
+
                 <div className="text-center mb-lg">
                     <div style={{
                         display: 'inline-flex',
@@ -74,7 +91,7 @@ export const SpacecatModal: React.FC<SpacecatModalProps> = ({ onUnlock }) => {
                     }}>
                         <Lock size={32} />
                     </div>
-                    <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Phase 1: The "Space" Check</h2>
+                    <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>The "Space" Check</h2>
                     <p className="text-muted">
                         Analyze the rhetorical situation to unlock the text.
                     </p>

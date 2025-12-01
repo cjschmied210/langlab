@@ -1,209 +1,317 @@
-import React from 'react';
-import { MOCK_CLASS_DATA } from './mockData';
-import { Users, Clock, CheckCircle, AlertTriangle, BarChart2, Activity, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, BookOpen, Loader2, FileText, Calendar, ChevronRight, Eye } from 'lucide-react';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { useAuth } from '../../contexts/AuthContext';
+import { CreateClassModal } from './components/CreateClassModal';
+import { CreateAssignmentModal } from './components/CreateAssignmentModal';
+import { ClassSettingsModal } from './components/ClassSettingsModal';
+import type { Class, Assignment } from '../../types/class';
 
 export const TeacherDashboard: React.FC = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [classes, setClasses] = useState<Class[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [activeClass, setActiveClass] = useState<Class | null>(null);
+    const [assignments, setAssignments] = useState<Assignment[]>([]);
+
+    // New State for Tabs
+    const [activeTab, setActiveTab] = useState<'assignments' | 'students'>('assignments');
+
+    const fetchClasses = async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const q = query(
+                collection(db, 'classes'),
+                where('teacherId', '==', user.uid),
+                orderBy('createdAt', 'desc')
+            );
+            const snapshot = await getDocs(q);
+            const fetchedClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Class));
+            setClasses(fetchedClasses);
+
+            if (fetchedClasses.length > 0) {
+                if (activeClass && fetchedClasses.find(c => c.id === activeClass.id)) {
+                    setActiveClass(fetchedClasses.find(c => c.id === activeClass.id) || fetchedClasses[0]);
+                } else {
+                    setActiveClass(fetchedClasses[0]);
+                }
+            } else {
+                setActiveClass(null);
+            }
+        } catch (error) {
+            console.error("Error fetching classes:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchAssignments = async () => {
+        if (!activeClass) return;
+        try {
+            const q = query(
+                collection(db, 'assignments'),
+                where('classId', '==', activeClass.id),
+                orderBy('createdAt', 'desc')
+            );
+            const snapshot = await getDocs(q);
+            const fetchedAssignments = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                dueDate: doc.data().dueDate?.toDate()
+            } as Assignment));
+            setAssignments(fetchedAssignments);
+        } catch (error) {
+            console.error("Error fetching assignments:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchClasses();
+    }, [user]);
+
+    useEffect(() => {
+        if (activeClass) {
+            fetchAssignments();
+        } else {
+            setAssignments([]);
+        }
+    }, [activeClass]);
+
+    const handleClassCreated = () => fetchClasses();
+    const handleAssignmentCreated = () => fetchAssignments();
+    const handleClassUpdated = () => fetchClasses();
+    const handleClassDeleted = () => {
+        setActiveClass(null);
+        fetchClasses();
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <Loader2 size={32} className="animate-spin text-primary" />
+            </div>
+        );
+    }
+
     return (
         <div className="container" style={{ paddingBottom: '4rem' }}>
-            <header className="mb-xl flex justify-between items-center">
+            <header className="mb-lg flex justify-between items-center">
                 <div>
-                    <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{MOCK_CLASS_DATA.className}</h1>
+                    <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
+                        {activeClass ? activeClass.name : 'Teacher Dashboard'}
+                    </h1>
                     <div className="text-muted text-sans" style={{ fontSize: '1.1rem' }}>
-                        Assignment: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{MOCK_CLASS_DATA.activeAssignment}</span>
+                        {activeClass ? (
+                            <>
+                                Join Code: <span style={{ color: 'var(--color-primary)', fontWeight: 600, fontFamily: 'monospace', fontSize: '1.2em' }}>{activeClass.joinCode}</span>
+                            </>
+                        ) : (
+                            'Welcome back! Create a class to get started.'
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-md">
-                    <button className="btn btn-outline">Manage Class</button>
-                    <button className="btn btn-primary">New Assignment</button>
+                    {activeClass && (
+                        <>
+                            <button onClick={() => setShowSettingsModal(true)} className="btn btn-outline">
+                                Settings
+                            </button>
+                            <button onClick={() => setShowAssignmentModal(true)} className="btn btn-primary">
+                                <Plus size={18} className="mr-sm" />
+                                New Assignment
+                            </button>
+                        </>
+                    )}
                 </div>
             </header>
 
-            {/* Top Stats Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
-                <StatCard
-                    icon={<Users size={24} />}
-                    label="Active Students"
-                    value={MOCK_CLASS_DATA.studentCount.toString()}
-                    trend="+2 absent"
-                />
-                <StatCard
-                    icon={<CheckCircle size={24} />}
-                    label="Completion Rate"
-                    value={`${MOCK_CLASS_DATA.completionRate}%`}
-                    trend="On track"
-                    color="var(--color-success)"
-                />
-                <StatCard
-                    icon={<Clock size={24} />}
-                    label="Avg. Reading Time"
-                    value={MOCK_CLASS_DATA.averageReadingTime}
-                    trend="Deep reading detected"
-                />
-                <StatCard
-                    icon={<AlertTriangle size={24} />}
-                    label="Confusion Spikes"
-                    value="3"
-                    trend="Needs Review"
-                    color="var(--color-accent)"
-                />
-            </div>
+            {/* Class Selector */}
+            {classes.length > 0 && (
+                <div className="flex gap-sm mb-lg overflow-x-auto pb-sm">
+                    {classes.map(cls => (
+                        <button
+                            key={cls.id}
+                            onClick={() => setActiveClass(cls)}
+                            className={`btn ${activeClass?.id === cls.id ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ whiteSpace: 'nowrap' }}
+                        >
+                            {cls.name}
+                        </button>
+                    ))}
+                </div>
+            )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-
-                {/* Main Column */}
-                <div className="flex flex-col gap-xl">
-
-                    {/* Confusion Heatmap */}
-                    <div className="card">
-                        <div className="flex justify-between items-center mb-lg">
-                            <h3 className="flex items-center gap-sm" style={{ margin: 0 }}>
-                                <Activity size={20} color="var(--color-primary)" />
-                                Confusion Report
-                            </h3>
-                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>Based on dwell time & re-reads</span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'flex-end', height: '200px', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-border)' }}>
-                            {MOCK_CLASS_DATA.confusionPoints.map((point, i) => (
-                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{
-                                        width: '100%',
-                                        backgroundColor: point.confusionScore > 50 ? 'var(--color-error)' : 'var(--color-primary-light)',
-                                        opacity: point.confusionScore > 50 ? 0.8 : 0.4,
-                                        height: `${point.confusionScore}%`,
-                                        borderRadius: '4px 4px 0 0',
-                                        transition: 'all 0.3s'
-                                    }} />
-                                    <span className="text-muted" style={{ fontSize: '0.8rem' }}>P{point.paragraph}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-md text-muted" style={{ fontSize: '0.9rem', fontStyle: 'italic' }}>
-                            <span style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>Alert:</span> Paragraph 4 ("pay any price") is causing significant friction. Consider a mini-lesson on Cold War context.
-                        </div>
+            {activeClass ? (
+                <>
+                    {/* Tabs */}
+                    <div className="flex border-b border-border mb-lg">
+                        <button
+                            className={`px-lg py-md font-medium text-sm border-b-2 transition-colors ${activeTab === 'assignments' ? 'border-primary text-primary font-bold' : 'border-transparent text-muted hover:text-text'}`}
+                            onClick={() => setActiveTab('assignments')}
+                        >
+                            Assignments
+                        </button>
+                        <button
+                            className={`px-lg py-md font-medium text-sm border-b-2 transition-colors ${activeTab === 'students' ? 'border-primary text-primary font-bold' : 'border-transparent text-muted hover:text-text'}`}
+                            onClick={() => setActiveTab('students')}
+                        >
+                            Students
+                        </button>
                     </div>
 
-                    {/* Verb Usage Chart */}
-                    <div className="card">
-                        <div className="flex justify-between items-center mb-lg">
-                            <h3 className="flex items-center gap-sm" style={{ margin: 0 }}>
-                                <BarChart2 size={20} color="var(--color-primary)" />
-                                RAV Engine Analytics
-                            </h3>
-                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>Top Verbs Used</span>
-                        </div>
-
-                        <div className="flex flex-col gap-sm">
-                            {MOCK_CLASS_DATA.verbUsage.map((item) => (
-                                <div key={item.verb} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <div style={{ width: '100px', fontWeight: 600, fontSize: '0.9rem', textAlign: 'right' }}>{item.verb}</div>
-                                    <div style={{ flex: 1, height: '24px', backgroundColor: 'var(--color-background)', borderRadius: '12px', overflow: 'hidden' }}>
-                                        <div style={{
-                                            height: '100%',
-                                            width: `${(item.count / 50) * 100}%`,
-                                            backgroundColor: item.category === 'Banned' ? 'var(--color-text-muted)' : 'var(--color-primary)',
-                                            borderRadius: '12px'
-                                        }} />
-                                    </div>
-                                    <div style={{ width: '40px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{item.count}</div>
+                    {/* Tab Content */}
+                    {activeTab === 'assignments' ? (
+                        <div>
+                            {assignments.length === 0 ? (
+                                <div className="text-center py-2xl border-2 border-dashed border-border rounded-lg">
+                                    <FileText size={48} className="mx-auto text-muted mb-md" />
+                                    <h3 className="text-lg font-medium mb-sm">No assignments yet</h3>
+                                    <p className="text-muted mb-lg">Create your first assignment to get started.</p>
+                                    <button onClick={() => setShowAssignmentModal(true)} className="btn btn-primary">
+                                        Create Assignment
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Student Submissions (Real Data) */}
-                    <div className="card">
-                        <div className="flex justify-between items-center mb-lg">
-                            <h3 className="flex items-center gap-sm" style={{ margin: 0 }}>
-                                <FileText size={20} color="var(--color-primary)" />
-                                Student Submissions
-                            </h3>
-                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>From Local Storage</span>
-                        </div>
-
-                        {(() => {
-                            const submissions = JSON.parse(localStorage.getItem('essay_submissions') || '[]');
-                            if (submissions.length === 0) {
-                                return <div className="text-muted italic">No submissions yet.</div>;
-                            }
-                            return (
+                            ) : (
                                 <div className="flex flex-col gap-md">
-                                    {submissions.map((sub: any, i: number) => (
-                                        <div key={i} style={{ padding: '1rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-                                            <div className="flex justify-between mb-sm">
-                                                <span style={{ fontWeight: 600 }}>{sub.studentName}</span>
-                                                <span className="text-muted" style={{ fontSize: '0.8rem' }}>{sub.submittedAt}</span>
+                                    {assignments.map(assignment => (
+                                        <div
+                                            key={assignment.id}
+                                            onClick={() => navigate(`/teacher/assignment/${assignment.id}`)}
+                                            className="card hover:border-primary cursor-pointer transition-all"
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.5rem' }}
+                                        >
+                                            {/* Left Section: Title & Date */}
+                                            <div style={{ flex: 1 }}>
+                                                <h3 className="text-xl font-bold mb-xs text-text">{assignment.title}</h3>
+                                                <div className="flex items-center gap-xs text-sm text-muted">
+                                                    <Calendar size={14} />
+                                                    Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'No date'}
+                                                </div>
                                             </div>
-                                            <div className="mb-sm">
-                                                <span className="text-muted text-xs uppercase">Thesis:</span>
-                                                <p style={{ fontStyle: 'italic', fontSize: '0.9rem' }}>{sub.thesis}</p>
+
+                                            {/* Middle Section: Status Badge */}
+                                            <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                                                <span className={`px-md py-xs rounded-full text-xs font-bold uppercase tracking-wide border ${assignment.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                                                    {assignment.status}
+                                                </span>
                                             </div>
-                                            <div className="text-xs text-muted">
-                                                {sub.paragraphs.length} Paragraphs
+
+                                            {/* Right Section: Stats & Chevron */}
+                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2rem' }}>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate(`/teacher/assignment/${assignment.id}/review`);
+                                                    }}
+                                                    className="btn btn-outline flex items-center gap-xs px-md py-sm hover:bg-primary/5 hover:border-primary transition-colors"
+                                                >
+                                                    <Eye size={16} />
+                                                    Review Work
+                                                </button>
+                                                <div className="text-right">
+                                                    <div className="text-sm font-semibold text-muted mb-xs">
+                                                        0 / {activeClass.studentIds?.length || 0} Submitted
+                                                    </div>
+                                                    <div className="w-32 bg-muted/20 rounded-full h-2 ml-auto">
+                                                        <div
+                                                            className="bg-primary h-2 rounded-full"
+                                                            style={{ width: '0%' }} // Mocked for now
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={24} className="text-muted" />
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                            );
-                        })()}
-                    </div>
-
-                </div>
-
-                {/* Sidebar Column */}
-                <div className="flex flex-col gap-lg">
-
-                    {/* Recent Activity */}
-                    <div className="card">
-                        <h3 className="mb-md" style={{ fontSize: '1.1rem' }}>Live Classroom</h3>
-                        <div className="flex flex-col gap-md">
-                            {MOCK_CLASS_DATA.recentActivity.map((activity, i) => (
-                                <div key={i} className="flex gap-sm items-start" style={{ paddingBottom: '0.75rem', borderBottom: i < MOCK_CLASS_DATA.recentActivity.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                                    <div style={{
-                                        width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-primary-light)', color: 'white',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold'
-                                    }}>
-                                        {activity.student.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{activity.student}</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{activity.action}</div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{activity.time}</div>
-                                    </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div>
+                            <div className="flex justify-between items-center mb-md">
+                                <h2 className="text-xl font-bold">Enrolled Students</h2>
+                                <div className="text-muted">
+                                    Total: {activeClass.studentIds?.length || 0}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
+                            </div>
 
-                    {/* Quick Actions */}
-                    <div className="card" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
-                        <h3 className="mb-md" style={{ fontSize: '1.1rem', color: 'white' }}>Teacher Tools</h3>
-                        <div className="flex flex-col gap-sm">
-                            <button className="btn" style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', justifyContent: 'flex-start', border: '1px solid rgba(255,255,255,0.2)' }}>
-                                Toggle Class Layer
-                            </button>
-                            <button className="btn" style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', justifyContent: 'flex-start', border: '1px solid rgba(255,255,255,0.2)' }}>
-                                Push "Pause & Reflect"
-                            </button>
-                            <button className="btn" style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', justifyContent: 'flex-start', border: '1px solid rgba(255,255,255,0.2)' }}>
-                                Export Grades
-                            </button>
+                            <div className="card">
+                                {(!activeClass.studentIds || activeClass.studentIds.length === 0) ? (
+                                    <div className="text-center py-xl text-muted">
+                                        No students enrolled yet. Share the join code:
+                                        <span className="font-mono font-bold text-primary ml-xs">{activeClass.joinCode}</span>
+                                    </div>
+                                ) : (
+                                    <table className="w-full">
+                                        <thead className="bg-muted/10 border-b border-border">
+                                            <tr>
+                                                <th className="text-left p-md font-semibold text-sm text-muted">Student ID</th>
+                                                <th className="text-left p-md font-semibold text-sm text-muted">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {activeClass.studentIds.map(studentId => (
+                                                <tr key={studentId} className="border-b border-border last:border-0">
+                                                    <td className="p-md font-mono text-sm">{studentId}</td>
+                                                    <td className="p-md">
+                                                        <span className="inline-flex items-center gap-xs px-sm py-xs rounded-full text-xs border bg-success/10 text-success border-success/20">
+                                                            Active
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
                         </div>
+                    )}
+                </>
+            ) : (
+                // No Classes State
+                <div className="text-center py-2xl">
+                    <div className="w-24 h-24 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-lg text-muted">
+                        <BookOpen size={48} />
                     </div>
-
+                    <h2 className="text-2xl font-bold mb-sm">No Classes Yet</h2>
+                    <p className="text-muted mb-xl">Create your first class to start tracking student progress.</p>
+                    <button onClick={() => setShowCreateModal(true)} className="btn btn-primary btn-lg">
+                        <Plus size={20} className="mr-sm" />
+                        Create Class
+                    </button>
                 </div>
-            </div>
+            )}
+
+            {showCreateModal && (
+                <CreateClassModal
+                    onClose={() => setShowCreateModal(false)}
+                    onClassCreated={handleClassCreated}
+                />
+            )}
+
+            {showAssignmentModal && activeClass && (
+                <CreateAssignmentModal
+                    classId={activeClass.id}
+                    onClose={() => setShowAssignmentModal(false)}
+                    onAssignmentCreated={handleAssignmentCreated}
+                />
+            )}
+
+            {showSettingsModal && activeClass && (
+                <ClassSettingsModal
+                    classData={activeClass}
+                    onClose={() => setShowSettingsModal(false)}
+                    onClassUpdated={handleClassUpdated}
+                    onClassDeleted={handleClassDeleted}
+                />
+            )}
         </div>
     );
 };
-
-const StatCard = ({ icon, label, value, trend, color = 'var(--color-primary)' }: any) => (
-    <div className="card" style={{ padding: '1.5rem' }}>
-        <div className="flex justify-between items-start mb-sm">
-            <div style={{ color: color }}>{icon}</div>
-            <span style={{ fontSize: '0.8rem', color: trend.includes('+') || trend === 'Needs Review' ? color : 'var(--color-success)', fontWeight: 600 }}>{trend}</span>
-        </div>
-        <div style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.25rem' }}>{value}</div>
-        <div className="text-muted" style={{ fontSize: '0.9rem' }}>{label}</div>
-    </div>
-);

@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, User, Eye } from 'lucide-react';
+import { BookOpen, User, Eye, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { JoinClassModal } from '../features/dashboard/components/JoinClassModal';
 
 export const Layout: React.FC = () => {
     const { user, userProfile } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [showJoinModal, setShowJoinModal] = useState(false);
 
     const isTeacher = userProfile?.role === 'teacher';
     const isStudentView = location.pathname.startsWith('/student');
@@ -24,6 +26,11 @@ export const Layout: React.FC = () => {
         } else {
             navigate('/student/dashboard');
         }
+    };
+
+    const handleClassJoined = () => {
+        // Reload to refresh dashboard data since we can't easily trigger a refresh from here
+        window.location.reload();
     };
 
     return (
@@ -47,6 +54,18 @@ export const Layout: React.FC = () => {
                                         {isStudentView ? 'Exit Student View' : 'Student View'}
                                     </button>
                                 )}
+
+                                {(isStudentView || !isTeacher) && (
+                                    <button
+                                        onClick={() => setShowJoinModal(true)}
+                                        className="btn btn-ghost"
+                                        style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', gap: '0.5rem', color: 'var(--color-primary)' }}
+                                    >
+                                        <Plus size={16} />
+                                        Join Class
+                                    </button>
+                                )}
+
                                 <Link to={getDashboardLink()} style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Dashboard</Link>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                                     <User size={16} />
@@ -67,6 +86,13 @@ export const Layout: React.FC = () => {
                     © {new Date().getFullYear()} LangLab. The AP Rhetoric Architect.
                 </div>
             </footer>
+
+            {showJoinModal && (
+                <JoinClassModal
+                    onClose={() => setShowJoinModal(false)}
+                    onClassJoined={handleClassJoined}
+                />
+            )}
         </div>
     );
 };

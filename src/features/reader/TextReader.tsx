@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { doc, getDoc, collection, addDoc, query, where, onSnapshot, deleteDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { SAMPLE_TEXT } from './data';
-import { SpacecatModal } from './SpacecatModal';
 import { ThesisBuilder } from '../thesis/ThesisBuilder';
 import { ParagraphBuilder } from '../writer/ParagraphBuilder';
 import { EssayAssembler } from '../writer/EssayAssembler';
-import { Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers } from 'lucide-react';
+import { Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers, Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle } from 'lucide-react';
 import { RHETORICAL_VERBS } from './data';
 
 interface Annotation {
@@ -15,59 +18,108 @@ interface Annotation {
     startOffset: number;
     endOffset: number;
     color: string;
+    userId?: string;
+    assignmentId?: string;
+}
+
+interface SpacecatData {
+    speaker: string;
+    purpose: string;
+    audience: string;
+    context: string;
+    exigence: string;
 }
 
 export const TextReader: React.FC = () => {
-    const [isLocked, setIsLocked] = useState(true);
+    const { id } = useParams<{ id: string }>();
+    const { user } = useAuth();
+    const [textData, setTextData] = useState(SAMPLE_TEXT);
+    const [loading, setLoading] = useState(!!id);
+
+    // Phase State: 'scavenger' | 'annotation'
+    const [phase, setPhase] = useState<'scavenger' | 'annotation'>('scavenger');
+
+    // Scavenger Hunt State
+    const [spacecatData, setSpacecatData] = useState<SpacecatData>({
+        speaker: '',
+        purpose: '',
+        audience: '',
+        context: '',
+        exigence: ''
+    });
+    const [isValidating, setIsValidating] = useState(false);
+    const [validationError, setValidationError] = useState<string | null>(null);
+
+    // Builder States
     const [showThesisBuilder, setShowThesisBuilder] = useState(false);
     const [showParagraphBuilder, setShowParagraphBuilder] = useState(false);
     const [showEssayAssembler, setShowEssayAssembler] = useState(false);
-    const [annotations, setAnnotations] = useState<Annotation[]>([
-        {
-            id: 'demo-1',
-            text: 'the torch has been passed to a new generation of Americans',
-            verb: 'juxtaposes',
-            commentary: 'This metaphor emphasizes the transfer of responsibility and the vitality of the new administration.',
-            startOffset: 218,
-            endOffset: 280,
-            color: '#fef3c7'
-        },
-        {
-            id: 'demo-2',
-            text: 'Ask not what your country can do for you--ask what you can do for your country',
-            verb: 'challenges',
-            commentary: 'This famous chiasmus shifts the burden of action from the government to the citizen.',
-            startOffset: 3700, // Approximate, just for demo data presence
-            endOffset: 3780,
-            color: '#fef3c7'
-        }
-    ]);
-    const [selection, setSelection] = useState<{ text: string; range: Range; start: number; end: number } | null>(null);
-    const [thesis, setThesis] = useState('Through the use of stirring metaphors and appeals to pathos, JFK unites the American people in a call to service.');
-    const [paragraphs, setParagraphs] = useState<any[]>([
-        {
-            id: 'demo-para-1',
-            claimVerb: {
-                id: 'demo-1',
-                text: 'the torch has been passed to a new generation of Americans',
-                verb: 'juxtaposes',
-                commentary: 'This metaphor emphasizes the transfer of responsibility and the vitality of the new administration.',
-                startOffset: 218,
-                endOffset: 280,
-                color: '#fef3c7'
-            },
-            evidence: 'the torch has been passed to a new generation of Americans',
-            commentary: 'By comparing leadership to a torch, Kennedy suggests that the presidency is a beacon of light and hope. This implies that the new generation has a duty to keep this fire burning, inspiring the audience to feel a sense of solemn duty.'
-        }
-    ]);
+
+    // Data States
+    const [annotations, setAnnotations] = useState<Annotation[]>([]);
+    const [selection, setSelection] = useState<{ text: string; range: Range | null; start: number; end: number } | null>(null);
+    const [thesis, setThesis] = useState('');
+    const [paragraphs, setParagraphs] = useState<any[]>([]);
 
     // Sidebar State
     const [sidebarMode, setSidebarMode] = useState<'list' | 'create'>('list');
     const [createStep, setCreateStep] = useState<'verb' | 'commentary'>('verb');
     const [selectedVerb, setSelectedVerb] = useState<string | null>(null);
     const [commentary, setCommentary] = useState('');
+    const [showAnnotationsList, setShowAnnotationsList] = useState(true);
+    const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
 
     const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const fetchAssignment = async () => {
+            if (!id) return;
+            setLoading(true);
+            try {
+                const docRef = doc(db, 'assignments', id);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setTextData({
+                        id: id,
+                        title: data.title,
+                        author: "Instructor Assigned",
+                        date: new Date(data.createdAt?.toDate()).toLocaleDateString(),
+                        content: data.content
+                    });
+                } else {
+                    console.error("No such assignment!");
+                }
+            } catch (error) {
+                console.error("Error fetching assignment:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAssignment();
+    }, [id]);
+
+    // Fetch Annotations
+    useEffect(() => {
+        if (!id || !user) return;
+
+        const q = query(
+            collection(db, 'annotations'),
+            where('assignmentId', '==', id),
+            where('userId', '==', user.uid)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedAnnotations = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Annotation));
+            setAnnotations(fetchedAnnotations);
+        });
+
+        return () => unsubscribe();
+    }, [id, user]);
 
     // Helper to get absolute offset relative to the container
     const getAbsoluteOffset = (container: Node, node: Node, offset: number): number => {
@@ -78,7 +130,7 @@ export const TextReader: React.FC = () => {
     };
 
     const handleMouseUp = () => {
-        if (isLocked) return;
+        if (phase === 'scavenger') return; // Disable selection in scavenger mode
 
         const windowSelection = window.getSelection();
         if (!windowSelection || windowSelection.isCollapsed || !contentRef.current) {
@@ -111,6 +163,7 @@ export const TextReader: React.FC = () => {
         setCreateStep('verb');
         setSelectedVerb(null);
         setCommentary('');
+        setEditingAnnotationId(null);
     };
 
     const handleVerbSelect = (verb: string) => {
@@ -118,42 +171,99 @@ export const TextReader: React.FC = () => {
         setCreateStep('commentary');
     };
 
-    const handleSaveAnnotation = () => {
-        if (!selection || !selectedVerb) return;
+    const handleEditAnnotation = (ann: Annotation) => {
+        setEditingAnnotationId(ann.id);
+        setSelectedVerb(ann.verb);
+        setCommentary(ann.commentary || '');
+        // Fake selection for UI display
+        setSelection({
+            text: ann.text,
+            start: ann.startOffset,
+            end: ann.endOffset,
+            range: null
+        });
+        setSidebarMode('create');
+        setCreateStep('commentary');
+    };
 
-        const newAnnotation: Annotation = {
-            id: Math.random().toString(36).substr(2, 9),
-            text: selection.text,
-            verb: selectedVerb,
-            commentary: commentary,
-            startOffset: selection.start,
-            endOffset: selection.end,
-            color: '#fef3c7'
-        };
+    const handleSaveAnnotation = async () => {
+        if (!selection || !selectedVerb || !user || !id) return;
 
-        setAnnotations([...annotations, newAnnotation]);
+        try {
+            if (editingAnnotationId) {
+                // Update existing annotation
+                const annRef = doc(db, 'annotations', editingAnnotationId);
+                await updateDoc(annRef, {
+                    verb: selectedVerb,
+                    commentary: commentary
+                });
+            } else {
+                // Create new annotation
+                const newAnnotation = {
+                    text: selection.text,
+                    verb: selectedVerb,
+                    commentary: commentary,
+                    startOffset: selection.start,
+                    endOffset: selection.end,
+                    color: '#fef3c7',
+                    userId: user.uid,
+                    assignmentId: id,
+                    createdAt: new Date()
+                };
+                await addDoc(collection(db, 'annotations'), newAnnotation);
+            }
 
-        // Reset state
-        setSelection(null);
-        setSidebarMode('list');
-        setCreateStep('verb');
-        setSelectedVerb(null);
-        setCommentary('');
-        window.getSelection()?.removeAllRanges();
+            // Reset state
+            setSelection(null);
+            setSidebarMode('list');
+            setCreateStep('verb');
+            setSelectedVerb(null);
+            setCommentary('');
+            setEditingAnnotationId(null);
+            window.getSelection()?.removeAllRanges();
+        } catch (error) {
+            console.error("Error saving annotation:", error);
+            alert("Failed to save annotation. Please try again.");
+        }
+    };
+
+    const handleDeleteAnnotation = async (annotationId: string) => {
+        if (!confirm("Are you sure you want to delete this annotation?")) return;
+        try {
+            await deleteDoc(doc(db, 'annotations', annotationId));
+        } catch (error) {
+            console.error("Error deleting annotation:", error);
+            alert("Failed to delete annotation.");
+        }
     };
 
     const handleCancelAnnotation = () => {
         setSelection(null);
         setSidebarMode('list');
+        setEditingAnnotationId(null);
         window.getSelection()?.removeAllRanges();
     };
 
+    const handleScrollToAnnotation = (annotationId: string) => {
+        const element = document.getElementById(`annotation-${annotationId}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Optional: Flash the element
+            element.style.transition = 'background-color 0.5s';
+            const originalColor = element.style.backgroundColor;
+            element.style.backgroundColor = 'yellow';
+            setTimeout(() => {
+                element.style.backgroundColor = originalColor;
+            }, 1000);
+        }
+    };
+
     const renderHighlightedContent = () => {
-        const text = SAMPLE_TEXT.content;
+        const text = textData.content;
 
         // Combine existing annotations with current selection (if active)
         const allHighlights = [...annotations];
-        if (selection && sidebarMode === 'create') {
+        if (selection && sidebarMode === 'create' && !editingAnnotationId) {
             allHighlights.push({
                 id: 'temp-selection',
                 text: selection.text,
@@ -178,12 +288,18 @@ export const TextReader: React.FC = () => {
             chunks.push(
                 <span
                     key={ann.id}
+                    id={`annotation-${ann.id}`}
                     style={{
                         backgroundColor: ann.id === 'temp-selection' ? ann.color : 'rgba(251, 191, 36, 0.3)',
                         borderBottom: ann.id === 'temp-selection' ? '2px dashed var(--color-primary)' : '2px solid var(--color-accent)',
                         cursor: 'pointer'
                     }}
                     title={ann.verb}
+                    onClick={() => {
+                        if (ann.id !== 'temp-selection') {
+                            handleScrollToAnnotation(ann.id);
+                        }
+                    }}
                 >
                     {text.slice(ann.startOffset, ann.endOffset)}
                 </span>
@@ -199,10 +315,89 @@ export const TextReader: React.FC = () => {
         return chunks;
     };
 
+    // --- Scavenger Mode Logic ---
+
+    const renderScavengerContent = () => {
+        // Split text by double newlines to find paragraphs
+        const paragraphs = textData.content.split('\n\n');
+
+        return (
+            <div className="space-y-6">
+                {paragraphs.map((para, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === paragraphs.length - 1;
+                    const isBlurred = !isFirst && !isLast;
+
+                    return (
+                        <p
+                            key={index}
+                            style={{
+                                filter: isBlurred ? 'blur(5px)' : 'none',
+                                userSelect: isBlurred ? 'none' : 'text',
+                                opacity: isBlurred ? 0.6 : 1,
+                                transition: 'all 0.5s ease'
+                            }}
+                        >
+                            {para}
+                        </p>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const handleSpacecatChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setSpacecatData(prev => ({ ...prev, [name]: value }));
+        setValidationError(null); // Clear error on edit
+    };
+
+    const validateSpacecat = async () => {
+        setIsValidating(true);
+        setValidationError(null);
+
+        // Simulate AI delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Basic validation: Check if fields have reasonable length
+        const { speaker, purpose, audience, context, exigence } = spacecatData;
+
+        if (speaker.length < 3) {
+            setValidationError("The Speaker name seems too short. Who is delivering this text?");
+            setIsValidating(false);
+            return;
+        }
+        if (purpose.length < 5) {
+            setValidationError("Please explain the Purpose. What does the speaker want to achieve?");
+            setIsValidating(false);
+            return;
+        }
+        if (audience.length < 3) {
+            setValidationError("Please specify the Audience more clearly.");
+            setIsValidating(false);
+            return;
+        }
+        if (context.length < 10) {
+            setValidationError("The Context should explain what is happening in the world. Please elaborate.");
+            setIsValidating(false);
+            return;
+        }
+        if (exigence.length < 10) {
+            setValidationError("The Exigence needs to explain the 'spark' or immediate reason for this text.");
+            setIsValidating(false);
+            return;
+        }
+
+        // Success!
+        setIsValidating(false);
+        setPhase('annotation');
+    };
+
+    // --- End Scavenger Mode Logic ---
+
     const handleParagraphComplete = (paragraph: any) => {
         setParagraphs([...paragraphs, paragraph]);
         setShowParagraphBuilder(false);
-        // Optional: Show a toast or notification
         alert('Paragraph added to essay!');
     };
 
@@ -211,6 +406,14 @@ export const TextReader: React.FC = () => {
         setShowThesisBuilder(false);
         alert('Thesis saved to essay!');
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <Loader2 size={32} className="animate-spin text-primary" />
+            </div>
+        );
+    }
 
     if (showEssayAssembler) {
         return (
@@ -235,13 +438,9 @@ export const TextReader: React.FC = () => {
     return (
         <div className="flex gap-lg" style={{ height: 'calc(100vh - 8rem)', overflow: 'hidden', position: 'relative' }}>
 
-            {isLocked && (
-                <SpacecatModal onUnlock={() => setIsLocked(false)} />
-            )}
-
             {showThesisBuilder && (
                 <ThesisBuilder
-                    authorName={SAMPLE_TEXT.author}
+                    authorName={textData.author}
                     availableVerbs={annotations.map(a => a.verb)}
                     onClose={() => setShowThesisBuilder(false)}
                     onSave={handleThesisSave}
@@ -249,12 +448,12 @@ export const TextReader: React.FC = () => {
             )}
 
             {/* Main Reader Area */}
-            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2rem', filter: isLocked ? 'blur(5px)' : 'none', pointerEvents: isLocked ? 'none' : 'auto' }} className="reader-scroll">
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2rem' }} className="reader-scroll">
                 <div style={{ maxWidth: '700px', margin: '0 auto', paddingBottom: '4rem' }}>
                     <header className="mb-lg text-center">
-                        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{SAMPLE_TEXT.title}</h1>
+                        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{textData.title}</h1>
                         <div className="text-muted" style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
-                            {SAMPLE_TEXT.author}, {SAMPLE_TEXT.date}
+                            {textData.author}, {textData.date}
                         </div>
                     </header>
 
@@ -269,195 +468,339 @@ export const TextReader: React.FC = () => {
                             whiteSpace: 'pre-wrap'
                         }}
                     >
-                        {renderHighlightedContent()}
+                        {phase === 'scavenger' ? renderScavengerContent() : renderHighlightedContent()}
                     </div>
                 </div>
             </div>
 
             {/* Dynamic Sidebar */}
             <div style={{
-                width: '350px',
+                width: '400px',
                 borderLeft: '1px solid var(--color-border)',
-                paddingLeft: '1.5rem',
+                padding: '1.5rem',
                 overflowY: 'auto',
-                filter: isLocked ? 'blur(5px)' : 'none',
-                pointerEvents: isLocked ? 'none' : 'auto',
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: 'var(--color-surface)'
+                backgroundColor: 'var(--color-surface)',
+                boxSizing: 'border-box'
             }}>
 
-                {sidebarMode === 'list' ? (
-                    // MODE: LIST ANNOTATIONS
-                    <>
-                        <div className="flex justify-between items-center mb-md">
-                            <h3 className="text-sans" style={{ fontSize: '1rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                                Annotations ({annotations.length})
-                            </h3>
+                {phase === 'scavenger' ? (
+                    // PHASE 1: SCAVENGER HUNT FORM
+                    <div className="flex flex-col h-full">
+                        <div className="mb-lg">
+                            <div className="flex items-center gap-sm mb-sm text-primary">
+                                <Lock size={24} />
+                                <h2 className="text-xl font-bold">The "Space" Check</h2>
+                            </div>
+                            <p className="text-sm text-muted">
+                                The text is locked. Identify the rhetorical situation from the intro and conclusion to unlock the full text.
+                            </p>
                         </div>
 
-                        <div className="flex flex-col gap-md" style={{ flex: 1, overflowY: 'auto' }}>
-                            {annotations.map(ann => (
-                                <div key={ann.id} className="card" style={{ padding: '1rem', borderLeft: '4px solid var(--color-accent)' }}>
-                                    <div className="flex justify-between items-start mb-sm">
-                                        <span style={{
-                                            backgroundColor: 'var(--color-primary)',
-                                            color: 'white',
-                                            fontSize: '0.7rem',
-                                            padding: '2px 6px',
-                                            borderRadius: '4px',
-                                            fontWeight: 600,
-                                            textTransform: 'uppercase'
-                                        }}>
-                                            {ann.verb}
-                                        </span>
-                                        <button
-                                            onClick={() => setAnnotations(annotations.filter(a => a.id !== ann.id))}
-                                            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-text-muted)', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                    <div style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'var(--color-text-muted)', borderLeft: '2px solid var(--color-border)', paddingLeft: '0.5rem', marginBottom: '0.5rem' }}>
-                                        "{ann.text}"
-                                    </div>
-                                    {ann.commentary && (
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', backgroundColor: 'var(--color-background)', padding: '0.5rem', borderRadius: '4px' }}>
-                                            <span style={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>Effect:</span>
-                                            {ann.commentary}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                        <div className="flex flex-col gap-md flex-1 overflow-y-auto pr-2">
+                            <div className="form-group">
+                                <label className="text-sm font-bold block mb-xs">Speaker</label>
+                                <input
+                                    type="text"
+                                    name="speaker"
+                                    value={spacecatData.speaker}
+                                    onChange={handleSpacecatChange}
+                                    placeholder="Who is speaking?"
+                                    className="w-full p-sm border rounded bg-background"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="text-sm font-bold block mb-xs">Purpose</label>
+                                <textarea
+                                    name="purpose"
+                                    value={spacecatData.purpose}
+                                    onChange={handleSpacecatChange}
+                                    placeholder="What does the speaker want to achieve?"
+                                    rows={2}
+                                    className="w-full p-sm border rounded bg-background resize-none"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="text-sm font-bold block mb-xs">Audience</label>
+                                <input
+                                    type="text"
+                                    name="audience"
+                                    value={spacecatData.audience}
+                                    onChange={handleSpacecatChange}
+                                    placeholder="Who is listening?"
+                                    className="w-full p-sm border rounded bg-background"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="text-sm font-bold block mb-xs">Context</label>
+                                <textarea
+                                    name="context"
+                                    value={spacecatData.context}
+                                    onChange={handleSpacecatChange}
+                                    placeholder="What is happening in the world?"
+                                    rows={3}
+                                    className="w-full p-sm border rounded bg-background resize-none"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="text-sm font-bold block mb-xs">Exigence</label>
+                                <textarea
+                                    name="exigence"
+                                    value={spacecatData.exigence}
+                                    onChange={handleSpacecatChange}
+                                    placeholder="Why write this NOW?"
+                                    rows={3}
+                                    className="w-full p-sm border rounded bg-background resize-none"
+                                />
+                            </div>
 
-                            {annotations.length === 0 && (
-                                <div className="text-muted text-center" style={{ fontSize: '0.9rem', fontStyle: 'italic', marginTop: '2rem' }}>
-                                    Select text to start analyzing.
+                            {validationError && (
+                                <div className="p-sm bg-destructive/10 text-destructive text-sm rounded flex items-start gap-xs">
+                                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                                    {validationError}
                                 </div>
                             )}
                         </div>
 
-                        <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                        <div className="mt-lg pt-md border-t">
                             <button
-                                className="btn btn-primary"
-                                style={{ width: '100%' }}
-                                onClick={() => setShowThesisBuilder(true)}
+                                onClick={validateSpacecat}
+                                disabled={isValidating}
+                                className="btn btn-primary w-full flex items-center justify-center gap-sm"
                             >
-                                <PenTool size={18} style={{ marginRight: '0.5rem' }} />
-                                Build Thesis
-                            </button>
-                            <button
-                                className="btn btn-outline"
-                                style={{ width: '100%' }}
-                                onClick={() => setShowParagraphBuilder(true)}
-                                disabled={annotations.length === 0}
-                            >
-                                <FileText size={18} style={{ marginRight: '0.5rem' }} />
-                                Build Paragraph
-                            </button>
-                            <button
-                                className="btn btn-outline"
-                                style={{ width: '100%' }}
-                                onClick={() => setShowEssayAssembler(true)}
-                                disabled={!thesis && paragraphs.length === 0}
-                            >
-                                <Layers size={18} style={{ marginRight: '0.5rem' }} />
-                                View Essay Skeleton ({paragraphs.length})
+                                {isValidating ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin" />
+                                        Verifying...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={18} />
+                                        Unlock Text
+                                    </>
+                                )}
                             </button>
                         </div>
-                    </>
+                    </div>
                 ) : (
-                    // MODE: CREATE ANNOTATION
-                    <div className="flex flex-col h-full">
-                        <div className="flex justify-between items-center mb-md pb-sm border-b">
-                            <h3 className="text-sans" style={{ fontSize: '1rem', color: 'var(--color-primary)', fontWeight: 700, margin: 0 }}>
-                                New Analysis
-                            </h3>
-                            <button onClick={handleCancelAnnotation} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-md)', borderLeft: '3px solid var(--color-primary)' }}>
-                            <div className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Selected Text</div>
-                            <div style={{ fontSize: '0.9rem', fontStyle: 'italic', maxHeight: '100px', overflowY: 'auto' }}>"{selection?.text}"</div>
-                        </div>
-
-                        {createStep === 'verb' ? (
-                            <div className="flex flex-col gap-md" style={{ flex: 1, overflowY: 'auto' }}>
-                                <div className="text-muted" style={{ fontSize: '0.85rem', fontWeight: 600 }}>What is the author doing?</div>
-                                {RHETORICAL_VERBS.map((category) => (
-                                    <div key={category.category}>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                                            {category.category}
-                                        </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                            {category.verbs.map((verb) => (
-                                                <button
-                                                    key={verb}
-                                                    onClick={() => handleVerbSelect(verb)}
-                                                    className="btn btn-outline"
-                                                    style={{ fontSize: '0.8rem', padding: '0.5rem', justifyContent: 'flex-start' }}
-                                                >
-                                                    {verb}
-                                                </button>
-                                            ))}
-                                        </div>
+                    // PHASE 2: ANNOTATION TOOLS (Existing Sidebar Logic)
+                    <>
+                        {sidebarMode === 'list' ? (
+                            // MODE: LIST ANNOTATIONS
+                            <>
+                                <div className="flex justify-between items-center mb-md cursor-pointer hover:bg-muted/10 p-sm rounded" onClick={() => setShowAnnotationsList(!showAnnotationsList)}>
+                                    <div className="flex items-center gap-sm">
+                                        <ChevronRight size={16} style={{ transform: showAnnotationsList ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                                        <h3 className="text-sans" style={{ fontSize: '1rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                                            Annotations ({annotations.length})
+                                        </h3>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col h-full">
-                                <button
-                                    onClick={() => setCreateStep('verb')}
-                                    className="text-muted mb-md flex items-center gap-xs"
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-                                >
-                                    <ArrowLeft size={14} /> Back to verbs
-                                </button>
-
-                                <div className="mb-lg">
-                                    <div className="text-muted" style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Function</div>
-                                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-primary)' }}>{selectedVerb}</div>
                                 </div>
 
-                                <div className="flex flex-col gap-sm" style={{ flex: 1 }}>
-                                    <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                                        How does this affect the audience?
-                                    </label>
-                                    <textarea
-                                        value={commentary}
-                                        onChange={(e) => setCommentary(e.target.value)}
-                                        placeholder="This contrast highlights [X] in order to make the audience feel/think [Y]..."
-                                        style={{
-                                            flex: 1,
-                                            width: '100%',
-                                            padding: '1rem',
-                                            borderRadius: 'var(--radius-md)',
-                                            border: '1px solid var(--color-border)',
-                                            fontFamily: 'var(--font-sans)',
-                                            fontSize: '0.95rem',
-                                            resize: 'none',
-                                            lineHeight: '1.6'
-                                        }}
-                                        autoFocus
-                                    />
-                                </div>
+                                {showAnnotationsList && (
+                                    <div className="flex flex-col gap-md transition-all" style={{ flex: 1, overflowY: 'auto', maxHeight: '50vh' }}>
+                                        {annotations.map(ann => (
+                                            <div
+                                                key={ann.id}
+                                                className="card hover:border-primary cursor-pointer transition-colors"
+                                                style={{ padding: '1rem', borderLeft: '4px solid var(--color-accent)' }}
+                                                onClick={() => handleScrollToAnnotation(ann.id)}
+                                            >
+                                                <div className="flex justify-between items-start mb-sm">
+                                                    <span style={{
+                                                        backgroundColor: 'var(--color-primary)',
+                                                        color: 'white',
+                                                        fontSize: '0.7rem',
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        fontWeight: 600,
+                                                        textTransform: 'uppercase'
+                                                    }}>
+                                                        {ann.verb}
+                                                    </span>
+                                                    <div className="flex items-center gap-xs">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditAnnotation(ann);
+                                                            }}
+                                                            className="p-1 hover:bg-muted/20 rounded text-muted hover:text-primary transition-colors"
+                                                            title="Edit annotation"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteAnnotation(ann.id);
+                                                            }}
+                                                            className="p-1 hover:bg-muted/20 rounded text-muted hover:text-destructive transition-colors"
+                                                            title="Delete annotation"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'var(--color-text-muted)', borderLeft: '2px solid var(--color-border)', paddingLeft: '0.5rem', marginBottom: '0.5rem' }}>
+                                                    "{ann.text}"
+                                                </div>
+                                                {ann.commentary && (
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', backgroundColor: 'var(--color-background)', padding: '0.5rem', borderRadius: '4px' }}>
+                                                        <span style={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>Effect:</span>
+                                                        {ann.commentary}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
 
-                                <div className="mt-lg pt-md border-t">
+                                        {annotations.length === 0 && (
+                                            <div className="text-muted text-center" style={{ fontSize: '0.9rem', fontStyle: 'italic', marginTop: '2rem' }}>
+                                                Select text to start analyzing.
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+
+                                    {/* Step 2: Context (SPACECAT) - Now completed */}
                                     <button
-                                        className="btn btn-primary"
-                                        style={{ width: '100%' }}
-                                        onClick={handleSaveAnnotation}
-                                        disabled={!commentary.trim()}
+                                        className="btn btn-outline text-success border-success"
+                                        style={{ width: '100%', cursor: 'default' }}
+                                        disabled
                                     >
                                         <Check size={18} style={{ marginRight: '0.5rem' }} />
-                                        Save Annotation
+                                        Context Analyzed (SPACECAT)
+                                    </button>
+
+                                    {/* Step 3: Thesis */}
+                                    <button
+                                        className="btn btn-outline"
+                                        style={{ width: '100%' }}
+                                        onClick={() => setShowThesisBuilder(true)}
+                                    >
+                                        <PenTool size={18} style={{ marginRight: '0.5rem' }} />
+                                        Build Thesis
+                                    </button>
+
+                                    {/* Step 4: Paragraphs */}
+                                    <button
+                                        className="btn btn-outline"
+                                        style={{ width: '100%' }}
+                                        onClick={() => setShowParagraphBuilder(true)}
+                                        disabled={annotations.length === 0}
+                                    >
+                                        <FileText size={18} style={{ marginRight: '0.5rem' }} />
+                                        Build Paragraph
+                                    </button>
+
+                                    <button
+                                        className="btn btn-outline"
+                                        style={{ width: '100%' }}
+                                        onClick={() => setShowEssayAssembler(true)}
+                                        disabled={!thesis && paragraphs.length === 0}
+                                    >
+                                        <Layers size={18} style={{ marginRight: '0.5rem' }} />
+                                        View Essay Skeleton ({paragraphs.length})
                                     </button>
                                 </div>
+                            </>
+                        ) : (
+                            // MODE: CREATE ANNOTATION
+                            <div className="flex flex-col h-full">
+                                <div className="flex justify-between items-center mb-md pb-sm border-b">
+                                    <h3 className="text-sans" style={{ fontSize: '1rem', color: 'var(--color-primary)', fontWeight: 700, margin: 0 }}>
+                                        {editingAnnotationId ? 'Edit Analysis' : 'New Analysis'}
+                                    </h3>
+                                    <button onClick={handleCancelAnnotation} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                                        <X size={18} />
+                                    </button>
+                                </div>
+
+                                <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-md)', borderLeft: '3px solid var(--color-primary)' }}>
+                                    <div className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Selected Text</div>
+                                    <div style={{ fontSize: '0.9rem', fontStyle: 'italic', maxHeight: '100px', overflowY: 'auto' }}>"{selection?.text}"</div>
+                                </div>
+
+                                {createStep === 'verb' ? (
+                                    <div className="flex flex-col gap-md" style={{ flex: 1, overflowY: 'auto' }}>
+                                        <div className="text-muted" style={{ fontSize: '0.85rem', fontWeight: 600 }}>What is the author doing?</div>
+                                        {RHETORICAL_VERBS.map((category) => (
+                                            <div key={category.category}>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                                                    {category.category}
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                    {category.verbs.map((verb) => (
+                                                        <button
+                                                            key={verb}
+                                                            onClick={() => handleVerbSelect(verb)}
+                                                            className={`btn ${selectedVerb === verb ? 'btn-primary' : 'btn-outline'}`}
+                                                            style={{ fontSize: '0.8rem', padding: '0.5rem', justifyContent: 'flex-start' }}
+                                                        >
+                                                            {verb}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col h-full">
+                                        <button
+                                            onClick={() => setCreateStep('verb')}
+                                            className="text-muted mb-md flex items-center gap-xs"
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                                        >
+                                            <ArrowLeft size={14} /> Back to verbs
+                                        </button>
+
+                                        <div className="mb-lg">
+                                            <div className="text-muted" style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Function</div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-primary)' }}>{selectedVerb}</div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-sm" style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                                                How does this affect the audience?
+                                            </label>
+                                            <textarea
+                                                value={commentary}
+                                                onChange={(e) => setCommentary(e.target.value)}
+                                                placeholder="This contrast highlights [X] in order to make the audience feel/think [Y]..."
+                                                style={{
+                                                    flex: 1,
+                                                    width: '100%',
+                                                    padding: '1rem',
+                                                    borderRadius: 'var(--radius-md)',
+                                                    border: '1px solid var(--color-border)',
+                                                    fontFamily: 'var(--font-sans)',
+                                                    fontSize: '0.95rem',
+                                                    resize: 'none',
+                                                    lineHeight: '1.6',
+                                                    boxSizing: 'border-box'
+                                                }}
+                                                autoFocus
+                                            />
+                                        </div>
+
+                                        <div className="mt-lg pt-md border-t">
+                                            <button
+                                                className="btn btn-primary"
+                                                style={{ width: '100%' }}
+                                                onClick={handleSaveAnnotation}
+                                                disabled={!commentary.trim()}
+                                            >
+                                                <Check size={18} style={{ marginRight: '0.5rem' }} />
+                                                {editingAnnotationId ? 'Update Annotation' : 'Save Annotation'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
+                    </>
                 )}
             </div>
         </div>

@@ -3,6 +3,8 @@ import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { TextReader } from './features/reader/TextReader';
 import { TeacherDashboard } from './features/dashboard/TeacherDashboard';
+import { AssignmentDetail } from './features/dashboard/AssignmentDetail';
+import { TeacherReview } from './features/teacher/TeacherReview';
 import { StudentDashboard } from './features/dashboard/StudentDashboard';
 import { Login } from './pages/Login';
 import { Onboarding } from './pages/Onboarding';
@@ -27,12 +29,29 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="reader" element={<TextReader />} />
+            <Route path="assignment/:id" element={<TextReader />} />
 
             <Route
               path="teacher/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['teacher']}>
                   <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="teacher/assignment/:assignmentId"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <AssignmentDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="teacher/assignment/:assignmentId/review"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <TeacherReview />
                 </ProtectedRoute>
               }
             />
