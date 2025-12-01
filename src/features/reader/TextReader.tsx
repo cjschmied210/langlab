@@ -7,7 +7,7 @@ import { SAMPLE_TEXT } from './data';
 import { ThesisBuilder } from '../thesis/ThesisBuilder';
 import { ParagraphBuilder } from '../writer/ParagraphBuilder';
 import { EssayAssembler } from '../writer/EssayAssembler';
-import { Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers, Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle } from 'lucide-react';
+import { Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers, Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle, User, Target, Users, Globe, Zap } from 'lucide-react';
 import { RHETORICAL_VERBS } from './data';
 
 interface Annotation {
@@ -486,98 +486,84 @@ export const TextReader: React.FC = () => {
             }}>
 
                 {phase === 'scavenger' ? (
-                    // PHASE 1: SCAVENGER HUNT FORM
+                    // PHASE 1: SCAVENGER HUNT FORM (Redesigned)
                     <div className="flex flex-col h-full">
-                        <div className="mb-lg">
-                            <div className="flex items-center gap-sm mb-sm text-primary">
-                                <Lock size={24} />
-                                <h2 className="text-xl font-bold">The "Space" Check</h2>
+                        <div className="mb-lg p-md bg-primary/5 rounded-lg border border-primary/10">
+                            <div className="flex items-center gap-sm mb-xs text-primary">
+                                <div className="p-2 bg-white rounded-full shadow-sm">
+                                    <Lock size={20} />
+                                </div>
+                                <h2 className="text-lg font-bold font-serif">The "Space" Check</h2>
                             </div>
-                            <p className="text-sm text-muted">
-                                The text is locked. Identify the rhetorical situation from the intro and conclusion to unlock the full text.
+                            <p className="text-xs text-muted leading-relaxed ml-1">
+                                The text is locked. Identify the rhetorical situation to proceed.
                             </p>
                         </div>
 
-                        <div className="flex flex-col gap-md flex-1 overflow-y-auto pr-2">
-                            <div className="form-group">
-                                <label className="text-sm font-bold block mb-xs">Speaker</label>
-                                <input
-                                    type="text"
-                                    name="speaker"
-                                    value={spacecatData.speaker}
-                                    onChange={handleSpacecatChange}
-                                    placeholder="Who is speaking?"
-                                    className="w-full p-sm border rounded bg-background"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="text-sm font-bold block mb-xs">Purpose</label>
-                                <textarea
-                                    name="purpose"
-                                    value={spacecatData.purpose}
-                                    onChange={handleSpacecatChange}
-                                    placeholder="What does the speaker want to achieve?"
-                                    rows={2}
-                                    className="w-full p-sm border rounded bg-background resize-none"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="text-sm font-bold block mb-xs">Audience</label>
-                                <input
-                                    type="text"
-                                    name="audience"
-                                    value={spacecatData.audience}
-                                    onChange={handleSpacecatChange}
-                                    placeholder="Who is listening?"
-                                    className="w-full p-sm border rounded bg-background"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="text-sm font-bold block mb-xs">Context</label>
-                                <textarea
-                                    name="context"
-                                    value={spacecatData.context}
-                                    onChange={handleSpacecatChange}
-                                    placeholder="What is happening in the world?"
-                                    rows={3}
-                                    className="w-full p-sm border rounded bg-background resize-none"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="text-sm font-bold block mb-xs">Exigence</label>
-                                <textarea
-                                    name="exigence"
-                                    value={spacecatData.exigence}
-                                    onChange={handleSpacecatChange}
-                                    placeholder="Why write this NOW?"
-                                    rows={3}
-                                    className="w-full p-sm border rounded bg-background resize-none"
-                                />
-                            </div>
+                        <div className="flex flex-col gap-sm flex-1 overflow-y-auto pr-1">
+                            {[
+                                { id: 'speaker', label: 'Speaker', icon: <User size={16} />, placeholder: 'Who is writing/speaking?', highlight: 'S' },
+                                { id: 'purpose', label: 'Purpose', icon: <Target size={16} />, placeholder: 'What do they want to achieve?', highlight: 'P', isArea: true },
+                                { id: 'audience', label: 'Audience', icon: <Users size={16} />, placeholder: 'Who is the intended target?', highlight: 'A' },
+                                { id: 'context', label: 'Context', icon: <Globe size={16} />, placeholder: 'What is happening in the world?', highlight: 'C', isArea: true },
+                                { id: 'exigence', label: 'Exigence', icon: <Zap size={16} />, placeholder: 'Why write this NOW? The spark.', highlight: 'E', isArea: true }
+                            ].map((field) => (
+                                <div key={field.id} className="group bg-background focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 border border-transparent focus-within:border-primary/50 rounded-lg transition-all duration-200">
+                                    <label className="flex items-center gap-xs px-md pt-md pb-xs cursor-text" onClick={() => document.getElementById(field.id)?.focus()}>
+                                        <span className="text-muted group-focus-within:text-primary transition-colors">{field.icon}</span>
+                                        <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                                            <span className="text-primary">{field.highlight}</span>{field.label.slice(1)}
+                                        </span>
+                                    </label>
+                                    <div className="px-md pb-md">
+                                        {field.isArea ? (
+                                            <textarea
+                                                id={field.id}
+                                                name={field.id}
+                                                value={spacecatData[field.id as keyof SpacecatData]}
+                                                onChange={handleSpacecatChange}
+                                                placeholder={field.placeholder}
+                                                rows={2}
+                                                className="w-full bg-transparent border-none p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans focus:ring-0 resize-none leading-relaxed"
+                                            />
+                                        ) : (
+                                            <input
+                                                id={field.id}
+                                                type="text"
+                                                name={field.id}
+                                                value={spacecatData[field.id as keyof SpacecatData]}
+                                                onChange={handleSpacecatChange}
+                                                placeholder={field.placeholder}
+                                                className="w-full bg-transparent border-none p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans focus:ring-0"
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
 
                             {validationError && (
-                                <div className="p-sm bg-destructive/10 text-destructive text-sm rounded flex items-start gap-xs">
+                                <div className="mt-sm p-sm bg-error/10 text-error text-xs font-medium rounded-md flex items-start gap-sm animate-in slide-in-from-top-1">
                                     <AlertCircle size={16} className="mt-0.5 shrink-0" />
                                     {validationError}
                                 </div>
                             )}
                         </div>
 
-                        <div className="mt-lg pt-md border-t">
+                        <div className="mt-lg pt-md border-t border-border">
                             <button
                                 onClick={validateSpacecat}
                                 disabled={isValidating}
-                                className="btn btn-primary w-full flex items-center justify-center gap-sm"
+                                className="btn btn-primary w-full py-md text-base font-medium shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-sm"
                             >
                                 {isValidating ? (
                                     <>
-                                        <Loader2 size={18} className="animate-spin" />
-                                        Verifying...
+                                        <Loader2 size={20} className="animate-spin" />
+                                        <span>Verifying...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Sparkles size={18} />
-                                        Unlock Text
+                                        <Sparkles size={20} />
+                                        <span>Unlock Text</span>
                                     </>
                                 )}
                             </button>
