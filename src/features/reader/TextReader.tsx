@@ -7,7 +7,11 @@ import { SAMPLE_TEXT } from './data';
 import { ThesisBuilder } from '../thesis/ThesisBuilder';
 import { ParagraphBuilder } from '../writer/ParagraphBuilder';
 import { EssayAssembler } from '../writer/EssayAssembler';
-import { Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers, Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle, User, Target, Users, Globe, Zap } from 'lucide-react';
+import {
+    Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers,
+    Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle,
+    User, Target, Users, Globe, Zap
+} from 'lucide-react';
 import { RHETORICAL_VERBS } from './data';
 
 interface Annotation {
@@ -134,7 +138,6 @@ export const TextReader: React.FC = () => {
 
         const windowSelection = window.getSelection();
         if (!windowSelection || windowSelection.isCollapsed || !contentRef.current) {
-            // Only clear selection if we aren't in the middle of creating an annotation
             if (sidebarMode === 'list') {
                 setSelection(null);
             }
@@ -158,7 +161,6 @@ export const TextReader: React.FC = () => {
             end
         });
 
-        // Automatically switch sidebar to create mode
         setSidebarMode('create');
         setCreateStep('verb');
         setSelectedVerb(null);
@@ -175,7 +177,6 @@ export const TextReader: React.FC = () => {
         setEditingAnnotationId(ann.id);
         setSelectedVerb(ann.verb);
         setCommentary(ann.commentary || '');
-        // Fake selection for UI display
         setSelection({
             text: ann.text,
             start: ann.startOffset,
@@ -191,14 +192,12 @@ export const TextReader: React.FC = () => {
 
         try {
             if (editingAnnotationId) {
-                // Update existing annotation
                 const annRef = doc(db, 'annotations', editingAnnotationId);
                 await updateDoc(annRef, {
                     verb: selectedVerb,
                     commentary: commentary
                 });
             } else {
-                // Create new annotation
                 const newAnnotation = {
                     text: selection.text,
                     verb: selectedVerb,
@@ -213,7 +212,6 @@ export const TextReader: React.FC = () => {
                 await addDoc(collection(db, 'annotations'), newAnnotation);
             }
 
-            // Reset state
             setSelection(null);
             setSidebarMode('list');
             setCreateStep('verb');
@@ -248,7 +246,6 @@ export const TextReader: React.FC = () => {
         const element = document.getElementById(`annotation-${annotationId}`);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Optional: Flash the element
             element.style.transition = 'background-color 0.5s';
             const originalColor = element.style.backgroundColor;
             element.style.backgroundColor = 'yellow';
@@ -260,8 +257,6 @@ export const TextReader: React.FC = () => {
 
     const renderHighlightedContent = () => {
         const text = textData.content;
-
-        // Combine existing annotations with current selection (if active)
         const allHighlights = [...annotations];
         if (selection && sidebarMode === 'create' && !editingAnnotationId) {
             allHighlights.push({
@@ -270,7 +265,7 @@ export const TextReader: React.FC = () => {
                 verb: 'Selecting...',
                 startOffset: selection.start,
                 endOffset: selection.end,
-                color: 'rgba(59, 130, 246, 0.2)' // Blue tint for active selection
+                color: 'rgba(59, 130, 246, 0.2)'
             } as Annotation);
         }
 
@@ -318,7 +313,6 @@ export const TextReader: React.FC = () => {
     // --- Scavenger Mode Logic ---
 
     const renderScavengerContent = () => {
-        // Split text by double newlines to find paragraphs
         const paragraphs = textData.content.split('\n\n');
 
         return (
@@ -349,17 +343,15 @@ export const TextReader: React.FC = () => {
     const handleSpacecatChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setSpacecatData(prev => ({ ...prev, [name]: value }));
-        setValidationError(null); // Clear error on edit
+        setValidationError(null);
     };
 
     const validateSpacecat = async () => {
         setIsValidating(true);
         setValidationError(null);
 
-        // Simulate AI delay
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Basic validation: Check if fields have reasonable length
         const { speaker, purpose, audience, context, exigence } = spacecatData;
 
         if (speaker.length < 3) {
@@ -388,12 +380,9 @@ export const TextReader: React.FC = () => {
             return;
         }
 
-        // Success!
         setIsValidating(false);
         setPhase('annotation');
     };
-
-    // --- End Scavenger Mode Logic ---
 
     const handleParagraphComplete = (paragraph: any) => {
         setParagraphs([...paragraphs, paragraph]);
@@ -486,7 +475,7 @@ export const TextReader: React.FC = () => {
             }}>
 
                 {phase === 'scavenger' ? (
-                    // PHASE 1: SCAVENGER HUNT FORM (Redesigned)
+                    // PHASE 1: SCAVENGER HUNT FORM (Redesigned & Polished)
                     <div className="flex flex-col h-full">
                         <div className="mb-lg p-md bg-primary/5 rounded-lg border border-primary/10">
                             <div className="flex items-center gap-sm mb-xs text-primary">
@@ -573,7 +562,6 @@ export const TextReader: React.FC = () => {
                     // PHASE 2: ANNOTATION TOOLS (Existing Sidebar Logic)
                     <>
                         {sidebarMode === 'list' ? (
-                            // MODE: LIST ANNOTATIONS
                             <>
                                 <div className="flex justify-between items-center mb-md cursor-pointer hover:bg-muted/10 p-sm rounded" onClick={() => setShowAnnotationsList(!showAnnotationsList)}>
                                     <div className="flex items-center gap-sm">
@@ -649,8 +637,6 @@ export const TextReader: React.FC = () => {
                                 )}
 
                                 <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-
-                                    {/* Step 2: Context (SPACECAT) - Now completed */}
                                     <button
                                         className="btn btn-outline text-success border-success"
                                         style={{ width: '100%', cursor: 'default' }}
@@ -660,7 +646,6 @@ export const TextReader: React.FC = () => {
                                         Context Analyzed (SPACECAT)
                                     </button>
 
-                                    {/* Step 3: Thesis */}
                                     <button
                                         className="btn btn-outline"
                                         style={{ width: '100%' }}
@@ -670,7 +655,6 @@ export const TextReader: React.FC = () => {
                                         Build Thesis
                                     </button>
 
-                                    {/* Step 4: Paragraphs */}
                                     <button
                                         className="btn btn-outline"
                                         style={{ width: '100%' }}
@@ -693,7 +677,6 @@ export const TextReader: React.FC = () => {
                                 </div>
                             </>
                         ) : (
-                            // MODE: CREATE ANNOTATION
                             <div className="flex flex-col h-full">
                                 <div className="flex justify-between items-center mb-md pb-sm border-b">
                                     <h3 className="text-sans" style={{ fontSize: '1rem', color: 'var(--color-primary)', fontWeight: 700, margin: 0 }}>
