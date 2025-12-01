@@ -33,7 +33,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
     });
     const [isDragging, setIsDragging] = useState(false);
 
-    // Helper to find verb category color
     const getVerbStyle = (verb: string) => {
         const category = RHETORICAL_VERBS.find(cat => cat.verbs.includes(verb))?.category || "Default";
         return CATEGORY_COLORS[category] || CATEGORY_COLORS["Default"];
@@ -66,7 +65,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
 
     const uniqueVerbs = Array.from(new Set(availableVerbs));
 
-    // Component for a Drop Zone
     const VerbSlot = ({ slot, label, number }: { slot: 'verb1' | 'verb2', label: string, number: number }) => {
         const currentVerb = thesis[slot];
         const style = currentVerb ? getVerbStyle(currentVerb) : null;
@@ -134,15 +132,12 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                 <div className="flex flex-1 overflow-hidden">
 
                     {/* LEFT SIDEBAR: Evidence Bank */}
-                    <div className="w-80 bg-background/50 border-r border-border flex flex-col">
-                        <div className="p-4 border-b border-border bg-white/50">
-                            <h4 className="text-xs font-bold text-muted uppercase flex items-center gap-2">
-                                <BookOpen size={14} />
-                                Available Verbs ({uniqueVerbs.length})
-                            </h4>
-                        </div>
-
-                        <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                    <div className="w-80 bg-background/50 border-r border-border p-6 overflow-y-auto">
+                        <h4 className="text-xs font-bold text-muted uppercase mb-4 flex items-center gap-2">
+                            <BookOpen size={14} />
+                            Available Verbs ({uniqueVerbs.length})
+                        </h4>
+                        <div className="flex flex-col gap-2">
                             {uniqueVerbs.length === 0 ? (
                                 <div className="text-center p-8 border-2 border-dashed border-border rounded-lg text-muted text-sm">
                                     <p>No annotations yet.</p>

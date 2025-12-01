@@ -425,7 +425,7 @@ export const TextReader: React.FC = () => {
     }
 
     return (
-        <div className="flex gap-lg" style={{ height: 'calc(100vh - 8rem)', overflow: 'hidden', position: 'relative' }}>
+        <div className="flex gap-md" style={{ height: 'calc(100vh - 8rem)', overflow: 'hidden', position: 'relative' }}>
 
             {showThesisBuilder && (
                 <ThesisBuilder
@@ -437,8 +437,8 @@ export const TextReader: React.FC = () => {
             )}
 
             {/* Main Reader Area */}
-            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2rem' }} className="reader-scroll">
-                <div style={{ maxWidth: '700px', margin: '0 auto', paddingBottom: '4rem' }}>
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '1rem' }} className="reader-scroll">
+                <div style={{ maxWidth: '750px', margin: '0 auto', paddingBottom: '4rem' }}>
                     <header className="mb-lg text-center">
                         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{textData.title}</h1>
                         <div className="text-muted" style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
@@ -464,7 +464,8 @@ export const TextReader: React.FC = () => {
 
             {/* Dynamic Sidebar */}
             <div style={{
-                width: '400px',
+                width: '320px',
+                minWidth: '320px',
                 borderLeft: '1px solid var(--color-border)',
                 padding: '1.5rem',
                 overflowY: 'auto',
