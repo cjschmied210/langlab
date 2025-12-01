@@ -61,6 +61,7 @@ export const TextReader: React.FC = () => {
     const [commentary, setCommentary] = useState('');
     const [showAnnotationsList, setShowAnnotationsList] = useState(true);
     const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
+    const [showSpacecatReview, setShowSpacecatReview] = useState(false);
 
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -270,6 +271,51 @@ export const TextReader: React.FC = () => {
 
     return (
         <div className="flex gap-md" style={{ height: 'calc(100vh - 8rem)', overflow: 'hidden', position: 'relative' }}>
+            {showSpacecatReview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center p-6 border-b border-border bg-background">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                                    <Sparkles size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold font-serif text-primary">Rhetorical Context</h2>
+                                    <p className="text-sm text-muted">Your analysis of the rhetorical situation.</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowSpacecatReview(false)} className="p-2 hover:bg-muted/10 rounded-full transition-colors text-muted">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
+                            {[
+                                { id: 'speaker', label: 'Speaker', icon: <User size={16} />, highlight: 'S' },
+                                { id: 'purpose', label: 'Purpose', icon: <Target size={16} />, highlight: 'P' },
+                                { id: 'audience', label: 'Audience', icon: <Users size={16} />, highlight: 'A' },
+                                { id: 'context', label: 'Context', icon: <Globe size={16} />, highlight: 'C' },
+                                { id: 'exigence', label: 'Exigence', icon: <Zap size={16} />, highlight: 'E' }
+                            ].map((field) => (
+                                <div key={field.id} className="group bg-background border border-border rounded-lg p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-muted">{field.icon}</span>
+                                        <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                                            <span className="text-primary">{field.highlight}</span>{field.label.slice(1)}
+                                        </span>
+                                    </div>
+                                    <div className="font-serif text-lg text-foreground leading-relaxed">
+                                        {spacecatData[field.id as keyof SpacecatData]}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="p-6 border-t border-border bg-background flex justify-end">
+                            <button onClick={() => setShowSpacecatReview(false)} className="btn btn-primary">Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showThesisBuilder && (
                 <ThesisBuilder
                     authorName={textData.author}
@@ -366,7 +412,14 @@ export const TextReader: React.FC = () => {
                                     </div>
                                 )}
                                 <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                                    <button className="btn btn-outline text-success border-success" style={{ width: '100%', cursor: 'default' }} disabled><Check size={18} style={{ marginRight: '0.5rem' }} />Context Analyzed (SPACECAT)</button>
+                                    <button
+                                        className="btn btn-outline text-success border-success hover:bg-success/10"
+                                        style={{ width: '100%' }}
+                                        onClick={() => setShowSpacecatReview(true)}
+                                    >
+                                        <Check size={18} style={{ marginRight: '0.5rem' }} />
+                                        Context Analyzed (SPACECAT)
+                                    </button>
                                     <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowThesisBuilder(true)}><PenTool size={18} style={{ marginRight: '0.5rem' }} />Build Thesis</button>
                                     <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowParagraphBuilder(true)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} />Build Paragraph</button>
                                     <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowEssayAssembler(true)} disabled={!thesis && paragraphs.length === 0}><Layers size={18} style={{ marginRight: '0.5rem' }} />View Essay Skeleton ({paragraphs.length})</button>
