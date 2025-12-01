@@ -113,7 +113,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                 className="bg-surface w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20"
                 style={{ maxWidth: '1100px' }}
             >
-                {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b border-border bg-background">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg text-primary">
@@ -130,8 +129,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                 </div>
 
                 <div className="flex flex-1 overflow-hidden">
-
-                    {/* LEFT SIDEBAR: Evidence Bank */}
                     <div className="w-80 bg-background/50 border-r border-border p-6 overflow-y-auto">
                         <h4 className="text-xs font-bold text-muted uppercase mb-4 flex items-center gap-2">
                             <BookOpen size={14} />
@@ -166,10 +163,7 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                         </div>
                     </div>
 
-                    {/* MAIN AREA: Builder Canvas */}
                     <div className="flex-1 flex flex-col bg-white relative">
-
-                        {/* Live Preview Banner */}
                         <div className="bg-primary/5 border-b border-primary/10 p-6 text-center sticky top-0 z-10">
                             <p className="text-xs font-bold text-primary/40 uppercase tracking-widest mb-2">Live Preview</p>
                             <p className="font-serif text-xl text-primary/90 leading-relaxed">
@@ -188,10 +182,7 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                             </p>
                         </div>
 
-                        {/* The "Machine" */}
                         <div className="flex-1 flex flex-col items-center justify-center p-12 gap-12 overflow-y-auto">
-
-                            {/* Step 1: The Strategy */}
                             <div className="w-full max-w-3xl">
                                 <div className="flex items-center gap-4">
                                     <div className="flex flex-col items-center gap-2">
@@ -200,7 +191,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                                             {authorName}
                                         </div>
                                     </div>
-
                                     <ArrowRight className="text-muted/20 shrink-0" size={32} />
                                     <VerbSlot slot="verb1" label="Initial Strategy" number={1} />
                                     <ArrowRight className="text-muted/20 shrink-0" size={32} />
@@ -208,7 +198,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                                 </div>
                             </div>
 
-                            {/* Step 2: The Purpose */}
                             <div className="w-full max-w-2xl p-6 bg-background/50 rounded-xl border border-border border-dashed">
                                 <div className="text-xs font-bold text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
                                     <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px]">3</span>
@@ -227,7 +216,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="mt-auto pt-8">
                                 <button
                                     onClick={handleSave}
@@ -238,7 +226,6 @@ export const ThesisBuilder: React.FC<ThesisBuilderProps> = ({ authorName, availa
                                     Finalize & Save Thesis
                                 </button>
                             </div>
-
                         </div>
                     </div>
                 </div>
