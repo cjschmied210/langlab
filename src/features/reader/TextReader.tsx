@@ -7,7 +7,8 @@ import {
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SAMPLE_TEXT } from './data';
-
+import { ParagraphBuilder } from '../writer/ParagraphBuilder';
+import { EssayAssembler } from '../writer/EssayAssembler';
 import {
     Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers,
     Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle,
@@ -49,8 +50,6 @@ export const TextReader: React.FC = () => {
     const [validationError, setValidationError] = useState<string | null>(null);
     const [annotations, setAnnotations] = useState<Annotation[]>([]);
     const [selection, setSelection] = useState<{ text: string; range: Range | null; start: number; end: number } | null>(null);
-    const [thesis, setThesis] = useState('');
-    const [paragraphs, setParagraphs] = useState<any[]>([]);
     const [sidebarMode, setSidebarMode] = useState<'list' | 'create'>('list');
     const [createStep, setCreateStep] = useState<'verb' | 'commentary'>('verb');
     const [selectedVerb, setSelectedVerb] = useState<string | null>(null);
@@ -98,12 +97,6 @@ export const TextReader: React.FC = () => {
                     if (data.spacecat) {
                         setSpacecatData(data.spacecat);
                         setPhase('annotation');
-                    }
-                    if (data.thesisStatement) {
-                        setThesis(data.thesisStatement);
-                    }
-                    if (data.paragraphs) {
-                        setParagraphs(data.paragraphs);
                     }
                 }
             } catch (error) {
@@ -225,26 +218,25 @@ export const TextReader: React.FC = () => {
         return chunks;
     };
 
+    // --- UPDATED: Robust Scavenger Content Renderer ---
     const renderScavengerContent = () => {
-        // 1. Intelligent Splitting
-        let rawParagraphs = textData.content.split('\n\n');
+        // 1. Try basic split
+        let paragraphs = textData.content.split('\n\n');
 
-        // Fallback for single line breaks if double breaks aren't found
-        if (rawParagraphs.length === 1 && textData.content.length > 200) {
-            rawParagraphs = textData.content.split('\n');
+        // 2. Fallback: If double-newline split failed (cramped text), use single newline
+        if (paragraphs.length === 1 && textData.content.length > 100) {
+            paragraphs = textData.content.split('\n');
         }
 
-        // 2. CRITICAL FIX: Filter out empty/whitespace-only paragraphs
-        // This ensures index 0 is ALWAYS the first real paragraph of text
-        const paragraphs = rawParagraphs.filter(p => p.trim().length > 0);
+        // 3. THE FIX: Filter out empty/whitespace paragraphs
+        // This prevents an invisible "first paragraph" from stealing the 'isFirst' slot
+        paragraphs = paragraphs.filter(p => p.trim().length > 0);
 
         return (
             <div className="space-y-6">
                 {paragraphs.map((para, index) => {
                     const isFirst = index === 0;
                     const isLast = index === paragraphs.length - 1;
-
-                    // Logic: Blur everything EXCEPT the first and last real paragraphs
                     const isBlurred = !isFirst && !isLast;
 
                     return (
@@ -255,9 +247,7 @@ export const TextReader: React.FC = () => {
                                 userSelect: isBlurred ? 'none' : 'text',
                                 opacity: isBlurred ? 0.5 : 1,
                                 transition: 'all 0.5s ease',
-                                lineHeight: '1.8',
-                                fontSize: '1.15rem',
-                                marginBottom: '1.5rem'
+                                marginBottom: '1.5rem' // Ensure visual gap
                             }}
                         >
                             {para}
@@ -295,20 +285,12 @@ export const TextReader: React.FC = () => {
         }
     };
 
-
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <Loader2 className="animate-spin text-primary" size={32} />
-            </div>
-        );
-    }
+    if (loading) return <div className="flex items-center justify-center h-screen"><Loader2 size={32} className="animate-spin text-primary" /></div>;
 
     return (
-        <div className="flex h-screen bg-surface overflow-hidden">
+        <div className="flex gap-md" style={{ height: 'calc(100vh - 8rem)', overflow: 'hidden', position: 'relative' }}>
             {showSpacecatReview && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center p-6 border-b border-border bg-background">
                             <div className="flex items-center gap-3">
@@ -351,8 +333,6 @@ export const TextReader: React.FC = () => {
                     </div>
                 </div>
             )}
-
-
 
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '1rem' }} className="reader-scroll">
                 <div style={{ maxWidth: '700px', margin: '0 auto', paddingBottom: '4rem' }}>
@@ -455,10 +435,10 @@ export const TextReader: React.FC = () => {
                                         onClick={() => navigate(`/assignment/${id}/thesis`)}
                                     >
                                         <PenTool size={18} style={{ marginRight: '0.5rem' }} />
-                                        1. Build Thesis
+                                        Enter Architect Mode
                                     </button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/paragraphs`)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} />2. Build Paragraphs</button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/essay`)} disabled={!thesis && paragraphs.length === 0}><Layers size={18} style={{ marginRight: '0.5rem' }} />3. Final Assembly</button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/paragraphs`)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} />Build Paragraph</button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/essay`)} disabled={!thesis && paragraphs.length === 0}><Layers size={18} style={{ marginRight: '0.5rem' }} />View Essay Skeleton ({paragraphs.length})</button>
                                 </div>
                             </>
                         ) : (
@@ -507,6 +487,6 @@ export const TextReader: React.FC = () => {
                     </>
                 )}
             </div>
-        </div >
+        </div>
     );
 };
