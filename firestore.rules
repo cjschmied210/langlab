@@ -54,7 +54,11 @@ service cloud.firestore {
 
     // Submissions collection (for SPACECAT and Essays)
     match /submissions/{submissionId} {
-      allow create, update: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Allow create if the new doc belongs to the user
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Allow update if the EXISTING doc belongs to the user AND the new doc still belongs to the user
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
+      // Allow read if owner or teacher
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isTeacher());
     }
   }
