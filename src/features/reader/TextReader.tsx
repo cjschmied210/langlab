@@ -7,8 +7,7 @@ import {
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SAMPLE_TEXT } from './data';
-import { ParagraphBuilder } from '../writer/ParagraphBuilder';
-import { EssayAssembler } from '../writer/EssayAssembler';
+
 import {
     Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers,
     Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle,
@@ -57,6 +56,8 @@ export const TextReader: React.FC = () => {
     const [showAnnotationsList, setShowAnnotationsList] = useState(true);
     const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
     const [showSpacecatReview, setShowSpacecatReview] = useState(false);
+    const [thesis, setThesis] = useState('');
+    const [paragraphs, setParagraphs] = useState<any[]>([]);
 
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -97,6 +98,12 @@ export const TextReader: React.FC = () => {
                     if (data.spacecat) {
                         setSpacecatData(data.spacecat);
                         setPhase('annotation');
+                    }
+                    if (data.thesisStatement) {
+                        setThesis(data.thesisStatement);
+                    }
+                    if (data.paragraphs) {
+                        setParagraphs(data.paragraphs);
                     }
                 }
             } catch (error) {
