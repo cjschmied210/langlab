@@ -92,21 +92,22 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
                                                         {...provided.dragHandleProps}
-                                                        className={`bg-white border rounded-xl p-md shadow-sm transition-all ${isUsed ? 'opacity-50 grayscale cursor-not-allowed border-dashed' : 'hover:shadow-md hover:border-primary cursor-grab active:cursor-grabbing'
+                                                        className={`bg-white border rounded-xl p-md shadow-sm transition-all border-l-4 border-l-accent ${isUsed ? 'opacity-50 grayscale cursor-not-allowed border-dashed' : 'hover:shadow-md hover:border-primary cursor-grab active:cursor-grabbing'
                                                             } ${snapshot.isDragging ? 'shadow-xl ring-2 ring-primary rotate-2 scale-105 z-50' : ''}`}
                                                     >
                                                         <div className="flex items-center justify-between mb-sm">
-                                                            <span className="bg-primary/10 text-primary text-xs font-bold px-sm py-xs rounded uppercase tracking-wider">
+                                                            <span className="bg-primary text-white text-[0.7rem] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
                                                                 {ann.verb}
                                                             </span>
                                                             {isUsed && <span className="text-xs font-bold text-muted uppercase">Selected</span>}
                                                         </div>
-                                                        <p className="text-sm text-muted italic font-serif leading-relaxed line-clamp-3 mb-sm">
+                                                        <p className="text-sm text-muted italic font-serif leading-relaxed line-clamp-3 mb-sm border-l-2 border-border pl-2">
                                                             "{ann.text}"
                                                         </p>
                                                         {ann.commentary && (
-                                                            <div className="text-xs text-muted border-t border-dashed pt-xs truncate">
-                                                                <span className="font-bold">Effect:</span> {ann.commentary}
+                                                            <div className="text-xs text-foreground bg-muted/10 p-2 rounded">
+                                                                <span className="font-bold text-[0.75rem] text-muted uppercase block mb-1">Effect:</span>
+                                                                {ann.commentary}
                                                             </div>
                                                         )}
                                                     </div>
