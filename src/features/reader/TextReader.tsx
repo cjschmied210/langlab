@@ -226,11 +226,44 @@ export const TextReader: React.FC = () => {
     };
 
     const renderScavengerContent = () => {
-        const paragraphs = textData.content.split('\n\n');
-        return <div className="space-y-6">{paragraphs.map((para, index) => {
-            const isFirst = index === 0; const isLast = index === paragraphs.length - 1; const isBlurred = !isFirst && !isLast;
-            return <p key={index} style={{ filter: isBlurred ? 'blur(5px)' : 'none', userSelect: isBlurred ? 'none' : 'text', opacity: isBlurred ? 0.6 : 1, transition: 'all 0.5s ease' }}>{para}</p>;
-        })}</div>;
+        // 1. Intelligent Splitting
+        // Try splitting by double newlines first (standard paragraphs)
+        let paragraphs = textData.content.split('\n\n');
+
+        // If that results in only 1 giant block (and the text is long), 
+        // fallback to splitting by single newlines
+        if (paragraphs.length === 1 && textData.content.length > 200) {
+            paragraphs = textData.content.split('\n');
+        }
+
+        // 2. Cleanup
+        // Remove empty or whitespace-only paragraphs so the "First" paragraph isn't just a blank line
+        paragraphs = paragraphs.filter(p => p.trim().length > 0);
+
+        return (
+            <div className="space-y-6">
+                {paragraphs.map((para, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === paragraphs.length - 1;
+                    const isBlurred = !isFirst && !isLast;
+
+                    return (
+                        <p
+                            key={index}
+                            className="text-lg leading-relaxed"
+                            style={{
+                                filter: isBlurred ? 'blur(5px)' : 'none',
+                                userSelect: isBlurred ? 'none' : 'text',
+                                opacity: isBlurred ? 0.5 : 1,
+                                transition: 'all 0.5s ease'
+                            }}
+                        >
+                            {para}
+                        </p>
+                    );
+                })}
+            </div>
+        );
     };
 
     const handleSpacecatChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
