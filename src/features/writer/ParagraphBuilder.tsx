@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Check, AlertCircle, Quote, BookOpen, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle, Quote } from 'lucide-react';
 
 interface Annotation {
     id: string;
@@ -20,14 +20,10 @@ interface ParagraphBuilderProps {
     annotations: Annotation[];
     onBack: () => void;
     onComplete: (paragraph: ParagraphState) => void;
-    textData?: {
-        title: string;
-        author: string;
-        content: string;
-    };
+    textData?: any; // Kept for interface compatibility but unused
 }
 
-export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations, onBack, onComplete, textData }) => {
+export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations, onBack, onComplete }) => {
     const [paragraph, setParagraph] = useState<ParagraphState>({
         id: 'p1',
         claimVerb: null,
@@ -37,8 +33,6 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
 
     const [commentarySentences, setCommentarySentences] = useState(0);
     const [evidenceSentences, setEvidenceSentences] = useState(0);
-    const [showText, setShowText] = useState(false);
-    const [isDrawerOpen, setIsDrawerOpen] = useState(true);
 
     const handleDragEnd = (result: DropResult) => {
         if (!result.destination) return;
@@ -69,63 +63,110 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
     const isRatioMet = commentarySentences >= (evidenceSentences * 2);
 
     return (
-        <div className="flex flex-col h-screen bg-surface overflow-hidden">
-            {/* Header */}
-            <header className="flex items-center justify-between p-md border-b bg-white z-10">
-                <button onClick={onBack} className="btn btn-ghost text-muted hover:text-foreground">
-                    <ArrowLeft size={20} className="mr-sm" />
-                    Exit Builder
-                </button>
-                <div className="text-center">
-                    <h1 className="text-lg font-bold text-primary">Paragraph Architect</h1>
-                    <p className="text-xs text-muted">Focus on Reasoning & Organization</p>
-                </div>
-                <button
-                    onClick={() => setShowText(!showText)}
-                    className={`btn ${showText ? 'btn-primary' : 'btn-outline'}`}
-                >
-                    <BookOpen size={18} className="mr-sm" />
-                    {showText ? 'Hide Text' : 'Show Text'}
-                </button>
-            </header>
+        <div className="flex h-screen bg-surface overflow-hidden">
+            <DragDropContext onDragEnd={handleDragEnd}>
 
-            {/* Main Content Area */}
-            <div className="flex-1 relative flex overflow-hidden">
+                {/* Left Sidebar: Evidence Bank */}
+                <div className="w-[350px] flex-shrink-0 bg-white border-r flex flex-col z-20 shadow-sm">
+                    <div className="p-md border-b flex items-center gap-sm">
+                        <button onClick={onBack} className="p-xs hover:bg-muted/10 rounded-full transition-colors text-muted">
+                            <ArrowLeft size={20} />
+                        </button>
+                        <h2 className="font-bold text-lg text-primary">Evidence Bank</h2>
+                    </div>
 
-                {/* Builder Stage (Center) */}
-                <div className="flex-1 overflow-y-auto p-xl pb-64"> {/* Extra padding for drawer */}
-                    <div className="max-w-3xl mx-auto space-y-xl">
-                        <DragDropContext onDragEnd={handleDragEnd}>
-
-                            {/* Step 1: Claim */}
-                            <div className="card p-xl shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-md mb-md">
-                                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">1</div>
-                                    <h3 className="text-lg font-bold m-0">Construct Topic Sentence</h3>
+                    <div className="flex-1 overflow-y-auto p-md bg-muted/5">
+                        <Droppable droppableId="annotations-list" isDropDisabled={true}>
+                            {(provided) => (
+                                <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className="flex flex-col gap-md"
+                                >
+                                    {annotations.map((ann, index) => {
+                                        const isUsed = paragraph.claimVerb?.id === ann.id;
+                                        return (
+                                            <Draggable key={ann.id} draggableId={ann.id} index={index} isDragDisabled={isUsed}>
+                                                {(provided, snapshot) => (
+                                                    <div
+                                                        ref={provided.innerRef}
+                                                        {...provided.draggableProps}
+                                                        {...provided.dragHandleProps}
+                                                        className={`bg-white border rounded-xl p-md shadow-sm transition-all ${isUsed ? 'opacity-50 grayscale cursor-not-allowed border-dashed' : 'hover:shadow-md hover:border-primary cursor-grab active:cursor-grabbing'
+                                                            } ${snapshot.isDragging ? 'shadow-xl ring-2 ring-primary rotate-2 scale-105 z-50' : ''}`}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-sm">
+                                                            <span className="bg-primary/10 text-primary text-xs font-bold px-sm py-xs rounded uppercase tracking-wider">
+                                                                {ann.verb}
+                                                            </span>
+                                                            {isUsed && <span className="text-xs font-bold text-muted uppercase">Selected</span>}
+                                                        </div>
+                                                        <p className="text-sm text-muted italic font-serif leading-relaxed line-clamp-3 mb-sm">
+                                                            "{ann.text}"
+                                                        </p>
+                                                        {ann.commentary && (
+                                                            <div className="text-xs text-muted border-t border-dashed pt-xs truncate">
+                                                                <span className="font-bold">Effect:</span> {ann.commentary}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </Draggable>
+                                        );
+                                    })}
+                                    {provided.placeholder}
                                 </div>
-                                <p className="text-muted mb-md">Drag a verb card from the drawer below to establish your focus.</p>
+                            )}
+                        </Droppable>
+                    </div>
+                </div>
+
+                {/* Main Stage: Builder */}
+                <div className="flex-1 flex flex-col bg-surface overflow-hidden relative">
+                    <header className="p-md border-b bg-white/50 backdrop-blur-sm z-10 text-center">
+                        <h1 className="text-xl font-bold text-primary">Paragraph Architect</h1>
+                        <p className="text-sm text-muted">Focus on Reasoning & Organization</p>
+                    </header>
+
+                    <div className="flex-1 overflow-y-auto p-xl">
+                        <div className="max-w-4xl mx-auto space-y-xl pb-32">
+
+                            {/* Step 1: Claim (The Hero) */}
+                            <div className="card p-xl shadow-md border-t-4 border-primary">
+                                <div className="flex items-center gap-md mb-lg">
+                                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-sm">1</div>
+                                    <div>
+                                        <h3 className="text-2xl font-bold m-0 text-foreground">Construct Topic Sentence</h3>
+                                        <p className="text-muted">Drag a verb card here to establish the focus of your paragraph.</p>
+                                    </div>
+                                </div>
 
                                 <Droppable droppableId="claim-slot">
                                     {(provided, snapshot) => (
                                         <div
                                             ref={provided.innerRef}
                                             {...provided.droppableProps}
-                                            className={`min-h-[100px] border-2 border-dashed rounded-lg flex items-center justify-center p-md transition-colors ${snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-border'
-                                                }`}
+                                            className={`min-h-[160px] border-2 border-dashed rounded-xl flex items-center justify-center p-xl transition-all duration-300 ${snapshot.isDraggingOver ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border bg-muted/5'
+                                                } ${paragraph.claimVerb ? 'bg-white border-solid border-primary/20' : ''}`}
                                         >
                                             {paragraph.claimVerb ? (
-                                                <div className="w-full animate-in fade-in zoom-in-95">
-                                                    <div className="text-xl font-bold text-primary mb-sm">
-                                                        The author <span className="underline decoration-2 decoration-accent">{paragraph.claimVerb.verb.toLowerCase()}s</span>...
+                                                <div className="w-full animate-in fade-in zoom-in-95 duration-300">
+                                                    <div className="text-3xl font-bold text-primary mb-md leading-tight text-center">
+                                                        The author <span className="underline decoration-4 decoration-accent underline-offset-4">{paragraph.claimVerb.verb.toLowerCase()}s</span>...
                                                     </div>
                                                     {paragraph.claimVerb.commentary && (
-                                                        <div className="text-base text-foreground">
+                                                        <div className="text-xl text-foreground/80 text-center font-serif italic">
                                                             ...in order to {paragraph.claimVerb.commentary.toLowerCase().replace(/^it /, '').replace(/\.$/, '')}.
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="text-muted font-medium">Drop Verb Card Here</span>
+                                                <div className="text-center pointer-events-none">
+                                                    <div className="text-muted/40 mb-sm">
+                                                        <ArrowLeft size={48} className="mx-auto rotate-180 opacity-50" />
+                                                    </div>
+                                                    <span className="text-lg font-medium text-muted">Drop Evidence Card Here</span>
+                                                </div>
                                             )}
                                             {provided.placeholder}
                                         </div>
@@ -135,33 +176,28 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
 
                             {/* Step 2: Evidence */}
                             {paragraph.claimVerb && (
-                                <div className="card p-xl shadow-sm hover:shadow-md transition-shadow animate-in slide-in-from-bottom-4 fade-in duration-500">
+                                <div className="card p-xl shadow-sm animate-in slide-in-from-bottom-8 fade-in duration-500">
                                     <div className="flex items-center gap-md mb-md">
-                                        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">2</div>
-                                        <h3 className="text-lg font-bold m-0">Evidence</h3>
+                                        <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold">2</div>
+                                        <h3 className="text-lg font-bold m-0 text-muted-foreground">Evidence</h3>
                                     </div>
-                                    <div className="bg-muted/10 p-lg rounded-lg border-l-4 border-muted italic font-serif text-lg leading-relaxed mb-sm">
-                                        <Quote size={20} className="text-muted mb-xs" />
+                                    <div className="bg-white p-lg rounded-lg border border-border shadow-inner italic font-serif text-lg leading-relaxed text-foreground/80">
+                                        <Quote size={24} className="text-accent mb-sm opacity-50" />
                                         "{paragraph.evidence}"
-                                    </div>
-                                    <div className="text-right text-xs text-muted font-bold uppercase">
-                                        Estimated Length: {evidenceSentences} sentence{evidenceSentences !== 1 ? 's' : ''}
                                     </div>
                                 </div>
                             )}
 
                             {/* Step 3: Commentary */}
                             {paragraph.claimVerb && (
-                                <div className="card p-xl shadow-sm hover:shadow-md transition-shadow animate-in slide-in-from-bottom-4 fade-in duration-500 delay-150">
-                                    <div className="flex items-center gap-md mb-md">
-                                        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">3</div>
-                                        <h3 className="text-lg font-bold m-0">Commentary</h3>
-                                    </div>
-
-                                    <div className="flex justify-between items-center mb-sm">
-                                        <label className="font-semibold text-sm">Analyze the evidence:</label>
-                                        <div className={`flex items-center gap-xs text-xs font-bold uppercase px-sm py-xs rounded-full ${isRatioMet ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                                            {isRatioMet ? <Check size={14} /> : <AlertCircle size={14} />}
+                                <div className="card p-xl shadow-sm animate-in slide-in-from-bottom-8 fade-in duration-500 delay-100">
+                                    <div className="flex items-center justify-between mb-md">
+                                        <div className="flex items-center gap-md">
+                                            <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold">3</div>
+                                            <h3 className="text-lg font-bold m-0 text-muted-foreground">Commentary</h3>
+                                        </div>
+                                        <div className={`flex items-center gap-xs text-xs font-bold uppercase px-md py-xs rounded-full transition-colors ${isRatioMet ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                                            {isRatioMet ? <Check size={16} /> : <AlertCircle size={16} />}
                                             Ratio: {commentarySentences} / {evidenceSentences * 2} Sentences
                                         </div>
                                     </div>
@@ -170,13 +206,13 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                                         value={paragraph.commentary}
                                         onChange={handleCommentaryChange}
                                         placeholder="Explain HOW the evidence supports your claim and WHY it matters to the audience..."
-                                        className={`w-full min-h-[150px] p-md rounded-md border text-base leading-relaxed focus:ring-2 focus:ring-primary/20 outline-none transition-all ${isRatioMet ? 'border-success focus:border-success' : 'border-border focus:border-primary'
+                                        className={`w-full min-h-[200px] p-lg rounded-xl border text-lg leading-relaxed focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-y ${isRatioMet ? 'border-success focus:border-success' : 'border-border focus:border-primary'
                                             }`}
                                     />
 
-                                    <div className="mt-lg flex justify-end">
+                                    <div className="mt-xl flex justify-end">
                                         <button
-                                            className="btn btn-primary shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                                            className="btn btn-primary btn-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all w-full sm:w-auto"
                                             disabled={!isRatioMet}
                                             onClick={() => onComplete(paragraph)}
                                         >
@@ -186,93 +222,10 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                                 </div>
                             )}
 
-                            {/* Evidence Drawer (Fixed Bottom) */}
-                            <div
-                                className={`fixed bottom-0 left-0 right-0 bg-white border-t shadow-[0_-4px_20px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out z-40 ${isDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-40px)]'
-                                    }`}
-                                style={{ height: '320px' }}
-                            >
-                                <div
-                                    className="h-10 bg-muted/5 border-b flex items-center justify-center cursor-pointer hover:bg-muted/10 transition-colors"
-                                    onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-                                >
-                                    {isDrawerOpen ? <ChevronDown size={20} className="text-muted" /> : <ChevronUp size={20} className="text-muted" />}
-                                    <span className="ml-xs text-xs font-bold text-muted uppercase tracking-wider">Evidence Bank ({annotations.length})</span>
-                                </div>
-
-                                <div className="p-lg h-full overflow-x-auto">
-                                    <Droppable droppableId="annotations-list" direction="horizontal" isDropDisabled={true}>
-                                        {(provided) => (
-                                            <div
-                                                ref={provided.innerRef}
-                                                {...provided.droppableProps}
-                                                className="flex gap-md pb-lg min-w-max px-md"
-                                            >
-                                                {annotations.map((ann, index) => {
-                                                    const isUsed = paragraph.claimVerb?.id === ann.id;
-                                                    return (
-                                                        <Draggable key={ann.id} draggableId={ann.id} index={index} isDragDisabled={isUsed}>
-                                                            {(provided, snapshot) => (
-                                                                <div
-                                                                    ref={provided.innerRef}
-                                                                    {...provided.draggableProps}
-                                                                    {...provided.dragHandleProps}
-                                                                    className={`w-[280px] h-[200px] flex-shrink-0 bg-white border rounded-xl p-md flex flex-col shadow-sm transition-all ${isUsed ? 'opacity-50 grayscale cursor-not-allowed border-dashed' : 'hover:shadow-md hover:border-primary cursor-grab active:cursor-grabbing'
-                                                                        } ${snapshot.isDragging ? 'shadow-xl ring-2 ring-primary rotate-2 scale-105 z-50' : ''}`}
-                                                                >
-                                                                    <div className="flex items-center justify-between mb-sm">
-                                                                        <span className="bg-primary/10 text-primary text-xs font-bold px-sm py-xs rounded uppercase tracking-wider">
-                                                                            {ann.verb}
-                                                                        </span>
-                                                                        {isUsed && <span className="text-xs font-bold text-muted uppercase">Selected</span>}
-                                                                    </div>
-                                                                    <div className="flex-1 overflow-hidden relative">
-                                                                        <p className="text-sm text-muted italic font-serif leading-relaxed line-clamp-4">
-                                                                            "{ann.text}"
-                                                                        </p>
-                                                                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
-                                                                    </div>
-                                                                    {ann.commentary && (
-                                                                        <div className="mt-sm pt-sm border-t border-dashed">
-                                                                            <p className="text-xs text-muted truncate">
-                                                                                <span className="font-bold">Effect:</span> {ann.commentary}
-                                                                            </p>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </Draggable>
-                                                    );
-                                                })}
-                                                {provided.placeholder}
-                                            </div>
-                                        )}
-                                    </Droppable>
-                                </div>
-                            </div>
-                        </DragDropContext>
+                        </div>
                     </div>
                 </div>
-
-                {/* Text Slide-over Panel */}
-                {showText && textData && (
-                    <div className="w-[400px] border-l bg-background shadow-xl z-30 flex flex-col animate-in slide-in-from-right duration-300">
-                        <div className="p-md border-b flex items-center justify-between bg-white">
-                            <h3 className="font-bold text-lg">Source Text</h3>
-                            <button onClick={() => setShowText(false)} className="p-xs hover:bg-muted/10 rounded-full">
-                                <X size={20} className="text-muted" />
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-lg">
-                            <h2 className="text-xl font-bold mb-xs">{textData.title}</h2>
-                            <p className="text-sm text-muted italic mb-lg">{textData.author}</p>
-                            <div className="font-serif text-lg leading-relaxed whitespace-pre-wrap text-foreground/90">
-                                {textData.content}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+            </DragDropContext>
         </div>
     );
 };
