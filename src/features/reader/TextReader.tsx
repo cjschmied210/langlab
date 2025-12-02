@@ -55,8 +55,6 @@ export const TextReader: React.FC = () => {
     const [showAnnotationsList, setShowAnnotationsList] = useState(true);
     const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
     const [showSpacecatReview, setShowSpacecatReview] = useState(false);
-    const [thesis, setThesis] = useState('');
-    const [paragraphs, setParagraphs] = useState<any[]>([]);
 
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -94,12 +92,8 @@ export const TextReader: React.FC = () => {
                         setSpacecatData(data.spacecat);
                         setPhase('annotation');
                     }
-                    if (data.thesisStatement) {
-                        setThesis(data.thesisStatement);
-                    }
-                    if (data.paragraphs) {
-                        setParagraphs(data.paragraphs);
-                    }
+
+
                 }
             } catch (error) { console.error(error); }
         };
