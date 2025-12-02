@@ -63,7 +63,7 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
     const isRatioMet = commentarySentences >= (evidenceSentences * 2);
 
     return (
-        <div className="flex h-screen bg-surface overflow-hidden">
+        <div className="flex h-screen bg-white overflow-hidden">
             <DragDropContext onDragEnd={handleDragEnd}>
 
                 {/* Left Sidebar: Evidence Bank */}
@@ -122,7 +122,7 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                 </div>
 
                 {/* Main Stage: Builder */}
-                <div className="flex-1 flex flex-col bg-surface overflow-hidden relative">
+                <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden relative">
                     <header className="p-md border-b bg-white/50 backdrop-blur-sm z-10 text-center">
                         <h1 className="text-xl font-bold text-primary">Paragraph Architect</h1>
                         <p className="text-sm text-muted">Focus on Reasoning & Organization</p>

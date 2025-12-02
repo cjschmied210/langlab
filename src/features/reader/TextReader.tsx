@@ -349,7 +349,7 @@ export const TextReader: React.FC = () => {
             )}
 
             {showParagraphBuilder && (
-                <div className="fixed inset-0 z-50 bg-background">
+                <div className="fixed inset-0 z-[100] bg-white">
                     <ParagraphBuilder
                         annotations={annotations}
                         onComplete={handleParagraphComplete}
