@@ -354,6 +354,7 @@ export const TextReader: React.FC = () => {
                         annotations={annotations}
                         onComplete={handleParagraphComplete}
                         onBack={() => setShowParagraphBuilder(false)}
+                        textData={textData}
                     />
                 </div>
             )}
