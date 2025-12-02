@@ -12,7 +12,6 @@ interface ThesisState {
     purpose: string;
 }
 
-// Refined Palette: Slightly more saturated for better contrast on white
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string; shadow: string }> = {
     "Comparison": { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe", shadow: "rgba(59, 130, 246, 0.15)" },
     "Emphasis": { bg: "#fffbeb", text: "#b45309", border: "#fde68a", shadow: "rgba(245, 158, 11, 0.15)" },
@@ -38,14 +37,13 @@ export const ThesisPage: React.FC = () => {
         const fetchData = async () => {
             if (!id || !user) return;
             try {
-                // 1. Assignment
                 const assignSnap = await getDoc(doc(db, 'assignments', id));
                 if (assignSnap.exists()) {
                     const data = assignSnap.data();
                     setAssignmentTitle(data.title);
                     setAuthorName(data.author || "The Author");
                 }
-                // 2. Annotations
+
                 const q = query(
                     collection(db, 'annotations'),
                     where('assignmentId', '==', id),
@@ -55,7 +53,7 @@ export const ThesisPage: React.FC = () => {
                 const verbs = annSnap.docs.map(d => d.data().verb);
                 setCollectedVerbs(Array.from(new Set(verbs)));
 
-                // 3. Check for existing thesis work
+                // Check for existing thesis work
                 const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
                 const subSnap = await getDoc(submissionRef);
                 if (subSnap.exists()) {
@@ -71,7 +69,6 @@ export const ThesisPage: React.FC = () => {
         fetchData();
     }, [id, user]);
 
-    // Drag Handlers
     const handleDragStart = (e: React.DragEvent, verb: string) => {
         e.dataTransfer.setData('text/plain', verb);
         setIsDragging(true);
@@ -108,8 +105,6 @@ export const ThesisPage: React.FC = () => {
         }
     };
 
-    // --- Sub-Components ---
-
     const DraggableToken = ({ verb }: { verb: string }) => {
         const style = getVerbStyle(verb);
         return (
@@ -117,15 +112,17 @@ export const ThesisPage: React.FC = () => {
                 draggable
                 onDragStart={(e) => handleDragStart(e, verb)}
                 onDragEnd={() => setIsDragging(false)}
-                className="group relative flex items-center gap-3 p-3 rounded-lg border bg-white cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-0.5"
                 style={{
-                    borderColor: style.border,
-                    boxShadow: `0 2px 0 ${style.border}` // Tactile "thick" border at bottom
+                    display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem',
+                    backgroundColor: 'white', borderRadius: 'var(--radius-md)',
+                    border: `1px solid ${style.border}`, borderLeft: `4px solid ${style.border}`,
+                    marginBottom: '0.5rem', cursor: 'grab', boxShadow: 'var(--shadow-sm)',
+                    transition: 'all 0.2s'
                 }}
+                className="hover-card"
             >
-                <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: style.text, opacity: 0.2 }}></div>
-                <span className="font-medium text-slate-700 text-sm flex-1">{verb}</span>
-                <GripVertical size={14} className="text-slate-300 group-hover:text-slate-500" />
+                <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, color: 'var(--color-text)', flex: 1 }}>{verb}</span>
+                <GripVertical size={14} style={{ color: 'var(--color-text-muted)', opacity: 0.5 }} />
             </div>
         );
     };
@@ -135,43 +132,39 @@ export const ThesisPage: React.FC = () => {
         const style = currentVerb ? getVerbStyle(currentVerb) : null;
 
         return (
-            <div className="flex flex-col gap-2 flex-1 min-w-[180px]">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">
-                    <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px]">{number}</span>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '160px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>{number}</span>
                     {label}
                 </div>
 
                 <div
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, slot)}
-                    className={`
-                        relative h-20 rounded-xl border-2 flex items-center justify-center transition-all duration-200
-                        ${currentVerb
-                            ? 'bg-white shadow-sm border-transparent'
-                            : 'border-dashed border-slate-200 bg-slate-50 inner-shadow-sm' // "Empty Socket" feel
-                        }
-                        ${isDragging && !currentVerb ? 'border-blue-400 bg-blue-50/50 scale-[1.02] shadow-[0_0_0_4px_rgba(59,130,246,0.1)]' : ''}
-                    `}
-                    style={currentVerb ? {
-                        backgroundColor: style?.bg,
-                        borderColor: style?.border,
-                        boxShadow: `0 4px 12px ${style?.shadow}`
-                    } : {}}
+                    style={{
+                        height: '80px',
+                        borderRadius: 'var(--radius-lg)',
+                        border: currentVerb ? `2px solid ${style?.border}` : '2px dashed var(--color-border)',
+                        backgroundColor: currentVerb ? style?.bg : (isDragging ? '#eff6ff' : 'var(--color-background)'),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        position: 'relative', transition: 'all 0.2s',
+                        boxShadow: currentVerb ? `0 4px 12px ${style?.shadow}` : 'none'
+                    }}
                 >
                     {currentVerb ? (
                         <>
-                            <span className="text-lg font-serif font-bold" style={{ color: style?.text }}>
+                            <span style={{ fontSize: '1.1rem', fontFamily: 'var(--font-serif)', fontWeight: 700, color: style?.text }}>
                                 {currentVerb}ing
                             </span>
                             <button
                                 onClick={() => setThesis(p => ({ ...p, [slot]: null }))}
-                                className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-sm border border-gray-100 text-slate-400 hover:text-red-500 hover:scale-110 transition-all"
+                                style={{ position: 'absolute', top: '5px', right: '5px', background: 'white', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}
                             >
-                                <X size={12} />
+                                <X size={12} color="var(--color-text-muted)" />
                             </button>
                         </>
                     ) : (
-                        <span className={`text-sm font-medium transition-colors ${isDragging ? 'text-blue-500' : 'text-slate-300'}`}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 500, color: isDragging ? 'var(--color-primary)' : 'var(--color-text-muted)', opacity: isDragging ? 1 : 0.5 }}>
                             Drop Strategy
                         </span>
                     )}
@@ -181,51 +174,52 @@ export const ThesisPage: React.FC = () => {
     };
 
     if (loading) {
-        return <div className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-900" /></div>;
+        return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 className="animate-spin" size={32} color="var(--color-primary)" /></div>;
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
-            {/* Top Navigation Bar */}
-            <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
-                        <ArrowLeft size={18} />
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fa' }}>
+            {/* Header */}
+            <header style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ padding: '0.5rem' }}>
+                        <ArrowLeft size={20} />
                     </button>
-                    <div className="h-6 w-px bg-slate-200"></div>
-                    <div className="flex items-center gap-2 text-slate-700">
-                        <Layout size={18} className="text-blue-600" />
-                        <span className="font-bold">Architect's Desk</span>
-                        <span className="text-slate-300 mx-1">/</span>
-                        <span className="text-sm text-slate-500">{assignmentTitle}</span>
+                    <div>
+                        <h1 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            The Architect's Desk
+                        </h1>
+                        <p style={{ fontSize: '0.8rem', margin: 0, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Drafting for: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{assignmentTitle}</span>
+                        </p>
                     </div>
                 </div>
-                <div className="flex gap-3">
-                    <button onClick={() => navigate(`/assignment/${id}`)} className="btn btn-ghost text-xs flex items-center gap-2 text-slate-500 hover:text-blue-600">
-                        <BookOpen size={14} /> View Text
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => navigate(`/assignment/${id}`)} className="btn btn-outline" style={{ fontSize: '0.8rem' }}>
+                        <BookOpen size={16} style={{ marginRight: '0.5rem' }} /> Reference Text
                     </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={!thesis.verb1 || !thesis.verb2 || !thesis.purpose}
-                        className="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white text-xs px-5 py-2 rounded-full shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2"
-                    >
-                        <Save size={14} /> Save Thesis
+                    <button onClick={handleSave} className="btn btn-primary" disabled={!thesis.verb1 || !thesis.verb2 || !thesis.purpose} style={{ fontSize: '0.8rem', opacity: (!thesis.verb1 || !thesis.verb2 || !thesis.purpose) ? 0.5 : 1 }}>
+                        <Save size={16} style={{ marginRight: '0.5rem' }} /> Save Thesis
                     </button>
                 </div>
             </header>
 
-            <main className="flex-1 flex overflow-hidden">
+            <main style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-                {/* LEFT: Inventory (Narrower, cleaner) */}
-                <div className="w-72 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-                    <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-                        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Evidence Bank</h2>
-                        <p className="text-[10px] text-slate-400">Drag items to the board.</p>
+                {/* LEFT: Inventory */}
+                <div style={{ width: '300px', backgroundColor: 'white', borderRight: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', zIndex: 5 }}>
+                    <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-background)' }}>
+                        <h2 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Layout size={16} /> Rhetorical Inventory
+                        </h2>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0.5rem 0 0 0', lineHeight: 1.4 }}>
+                            Drag strategies onto the drafting board.
+                        </p>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-slate-200">
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
                         {collectedVerbs.length === 0 ? (
-                            <div className="p-6 border-2 border-dashed border-slate-100 rounded-xl text-center">
-                                <p className="text-xs text-slate-400">No annotations found.</p>
+                            <div style={{ padding: '2rem', border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>No annotations found.</p>
                             </div>
                         ) : (
                             collectedVerbs.map(verb => <DraggableToken key={verb} verb={verb} />)
@@ -233,89 +227,64 @@ export const ThesisPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* RIGHT: Construction Canvas */}
-                <div className="flex-1 bg-[#f8fafc] relative flex flex-col overflow-hidden">
-
-                    {/* 1. The Live Preview (Sticky & Elegant) */}
-                    <div className="bg-white/80 backdrop-blur-md border-b border-blue-100 p-8 text-center z-10 shadow-sm">
-                        <div className="max-w-4xl mx-auto">
-                            <div className="mb-2 flex items-center justify-center gap-2">
-                                <Sparkles size={14} className="text-amber-400" />
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Preview</span>
+                {/* RIGHT: Drafting Board */}
+                <div style={{ flex: 1, backgroundColor: '#f0f4f8', display: 'flex', flexDirection: 'column', overflowY: 'auto', position: 'relative' }}>
+                    {/* Live Preview Banner */}
+                    <div style={{ backgroundColor: 'white', borderBottom: '1px solid var(--color-primary-light)', padding: '2rem', textAlign: 'center', position: 'sticky', top: 0, zIndex: 5, boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                <Sparkles size={14} color="var(--color-accent)" />
+                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Live Preview</span>
                             </div>
-                            <p className="font-serif text-2xl text-slate-700 leading-relaxed">
-                                <span className="font-bold text-slate-900">{authorName}</span> begins by
-                                <span className={`mx-2 px-2 py-0.5 rounded transition-all ${thesis.verb1 ? 'bg-blue-50 text-blue-700 font-bold border-b-2 border-blue-200' : 'text-slate-300 italic border-b-2 border-dashed border-slate-200'}`}>
-                                    {thesis.verb1 ? `${thesis.verb1}ing` : "strategy"}
+                            <p style={{ fontSize: '1.5rem', fontFamily: 'var(--font-serif)', lineHeight: 1.6, color: 'var(--color-text)' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{authorName}</span> begins by
+                                <span style={{ margin: '0 0.5rem', padding: '0 0.25rem', borderBottom: thesis.verb1 ? '2px solid var(--color-primary)' : '2px dashed var(--color-border)', color: thesis.verb1 ? 'var(--color-primary)' : 'var(--color-text-muted)', fontStyle: thesis.verb1 ? 'normal' : 'italic' }}>
+                                    {thesis.verb1 ? `${thesis.verb1}ing` : " [strategy] "}
                                 </span>
                                 , then shifts to
-                                <span className={`mx-2 px-2 py-0.5 rounded transition-all ${thesis.verb2 ? 'bg-blue-50 text-blue-700 font-bold border-b-2 border-blue-200' : 'text-slate-300 italic border-b-2 border-dashed border-slate-200'}`}>
-                                    {thesis.verb2 ? `${thesis.verb2}ing` : "strategy"}
+                                <span style={{ margin: '0 0.5rem', padding: '0 0.25rem', borderBottom: thesis.verb2 ? '2px solid var(--color-primary)' : '2px dashed var(--color-border)', color: thesis.verb2 ? 'var(--color-primary)' : 'var(--color-text-muted)', fontStyle: thesis.verb2 ? 'normal' : 'italic' }}>
+                                    {thesis.verb2 ? `${thesis.verb2}ing` : " [strategy] "}
                                 </span>
                                 {' '}in order to{' '}
-                                <span className={`mx-2 px-2 py-0.5 rounded transition-all ${thesis.purpose ? 'bg-amber-50 text-amber-800 font-bold border-b-2 border-amber-200' : 'text-slate-300 italic border-b-2 border-dashed border-slate-200'}`}>
-                                    {thesis.purpose || "universal purpose"}
+                                <span style={{ margin: '0 0.5rem', padding: '0 0.25rem', borderBottom: thesis.purpose ? '2px solid var(--color-accent)' : '2px dashed var(--color-border)', color: thesis.purpose ? 'var(--color-text)' : 'var(--color-text-muted)', fontStyle: thesis.purpose ? 'normal' : 'italic' }}>
+                                    {thesis.purpose || " [universal purpose]"}
                                 </span>.
                             </p>
                         </div>
                     </div>
 
-                    {/* 2. The Workspace (Center Stage) */}
-                    <div className="flex-1 overflow-y-auto p-10 flex items-center justify-center">
-                        {/* Subtle Grid Background */}
-                        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '32px 32px', opacity: 0.4 }}></div>
+                    {/* Workspace */}
+                    <div style={{ flex: 1, padding: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '100%', maxWidth: '1000px', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--color-border)', padding: '3rem' }}>
 
-                        <div className="w-full max-w-5xl space-y-8 relative">
-
-                            {/* The Flow Chart */}
-                            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200/60">
-                                <div className="flex items-center gap-6">
-                                    {/* Static Author Node */}
-                                    <div className="flex flex-col gap-2 w-40 shrink-0">
-                                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center">Speaker</div>
-                                        <div className="h-20 flex items-center justify-center bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-600 text-center px-4 text-sm">
-                                            {authorName}
-                                        </div>
+                            {/* Step 1: Structure */}
+                            <div style={{ marginBottom: '3rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                    {/* Author Block */}
+                                    <div style={{ width: '150px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'center', padding: '0.5rem' }}>
+                                        {authorName}
                                     </div>
 
-                                    {/* Flow Connector 1 */}
-                                    <div className="flex-1 h-px bg-slate-200 relative">
-                                        <div className="absolute right-0 -top-1.5 text-slate-300"><ArrowRight size={16} /></div>
-                                    </div>
-
-                                    {/* Slot 1 */}
-                                    <DropSocket slot="verb1" label="Initial Strategy" number={1} />
-
-                                    {/* Flow Connector 2 */}
-                                    <div className="flex-1 h-px bg-slate-200 relative">
-                                        <div className="absolute right-0 -top-1.5 text-slate-300"><ArrowRight size={16} /></div>
-                                    </div>
-
-                                    {/* Slot 2 */}
-                                    <DropSocket slot="verb2" label="Shift / Evolution" number={2} />
+                                    <ArrowRight size={24} color="var(--color-border)" />
+                                    <DropSocket slot="verb1" label="Strategy 1" number={1} />
+                                    <ArrowRight size={24} color="var(--color-border)" />
+                                    <DropSocket slot="verb2" label="Strategy 2" number={2} />
                                 </div>
                             </div>
 
-                            {/* The Purpose Block */}
-                            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200/60">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
-                                        <Sparkles size={20} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Step 3: The "In Order To"</label>
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-xl font-serif italic text-slate-300">...in order to</span>
-                                            <input
-                                                type="text"
-                                                value={thesis.purpose}
-                                                onChange={(e) => setThesis(p => ({ ...p, purpose: e.target.value }))}
-                                                placeholder="convey [message] to the audience..."
-                                                className="flex-1 bg-transparent border-b-2 border-slate-100 focus:border-amber-400 outline-none py-2 font-serif text-xl text-slate-800 placeholder:text-slate-200 transition-colors"
-                                                autoComplete="off"
-                                            />
-                                        </div>
-                                    </div>
+                            {/* Step 2: Purpose */}
+                            <div style={{ paddingTop: '2rem', borderTop: '2px dashed var(--color-border)' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'block' }}>Step 3: The "In Order To"</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: 'var(--color-background)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                                    <span style={{ fontSize: '1.25rem', fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>...in order to</span>
+                                    <input
+                                        type="text"
+                                        value={thesis.purpose}
+                                        onChange={(e) => setThesis(p => ({ ...p, purpose: e.target.value }))}
+                                        placeholder="convey what message to the audience?"
+                                        style={{ flex: 1, backgroundColor: 'transparent', border: 'none', borderBottom: '2px solid var(--color-border)', outline: 'none', padding: '0.5rem', fontFamily: 'var(--font-serif)', fontSize: '1.25rem', color: 'var(--color-text)' }}
+                                        autoComplete="off"
+                                    />
                                 </div>
                             </div>
 
