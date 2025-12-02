@@ -11,6 +11,7 @@ interface CreateAssignmentModalProps {
 
 export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ classId, onClose, onAssignmentCreated }) => {
     const [title, setTitle] = useState('');
+    const [author, setAuthor] = useState(''); // <--- New Author State
     const [content, setContent] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +26,7 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ cl
             await addDoc(collection(db, 'assignments'), {
                 classId,
                 title,
+                author: author.trim() || "Unknown Author", // <--- Saving the Author
                 content,
                 dueDate: new Date(dueDate),
                 status: 'active',
@@ -65,6 +67,19 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ cl
                                 required
                             />
                         </div>
+
+                        {/* NEW AUTHOR INPUT FIELD */}
+                        <div>
+                            <label className="block text-sm font-semibold text-muted mb-xs">Author / Speaker</label>
+                            <input
+                                type="text"
+                                value={author}
+                                onChange={(e) => setAuthor(e.target.value)}
+                                placeholder="e.g. John F. Kennedy"
+                                className="w-full p-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-muted mb-xs">Due Date</label>
                             <div className="relative">

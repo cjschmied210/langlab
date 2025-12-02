@@ -13,6 +13,7 @@ export interface Assignment {
     id: string;
     classId: string;
     title: string;
+    author?: string; // <--- Added this field
     dueDate: any;
     status: 'active' | 'draft' | 'archived';
     content: string;
