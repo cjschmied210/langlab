@@ -7,6 +7,8 @@ import { AssignmentDetail } from './features/dashboard/AssignmentDetail';
 import { TeacherReview } from './features/teacher/TeacherReview';
 import { StudentDashboard } from './features/dashboard/StudentDashboard';
 import { ThesisPage } from './features/thesis/ThesisPage';
+import { ParagraphPage } from './features/writer/ParagraphPage';
+import { EssayPage } from './features/writer/EssayPage';
 import { Login } from './pages/Login';
 import { Onboarding } from './pages/Onboarding';
 import { AuthProvider } from './contexts/AuthContext';
@@ -36,6 +38,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ThesisPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="assignment/:id/paragraphs"
+              element={
+                <ProtectedRoute>
+                  <ParagraphPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="assignment/:id/essay"
+              element={
+                <ProtectedRoute>
+                  <EssayPage />
                 </ProtectedRoute>
               }
             />

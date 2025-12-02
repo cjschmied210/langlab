@@ -7,8 +7,7 @@ import {
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SAMPLE_TEXT } from './data';
-import { ParagraphBuilder } from '../writer/ParagraphBuilder';
-import { EssayAssembler } from '../writer/EssayAssembler';
+
 import {
     Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers,
     Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle,
@@ -48,8 +47,6 @@ export const TextReader: React.FC = () => {
     });
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
-    const [showParagraphBuilder, setShowParagraphBuilder] = useState(false);
-    const [showEssayAssembler, setShowEssayAssembler] = useState(false);
     const [annotations, setAnnotations] = useState<Annotation[]>([]);
     const [selection, setSelection] = useState<{ text: string; range: Range | null; start: number; end: number } | null>(null);
     const [thesis, setThesis] = useState('');
@@ -104,6 +101,9 @@ export const TextReader: React.FC = () => {
                     }
                     if (data.thesisStatement) {
                         setThesis(data.thesisStatement);
+                    }
+                    if (data.paragraphs) {
+                        setParagraphs(data.paragraphs);
                     }
                 }
             } catch (error) {
@@ -260,38 +260,7 @@ export const TextReader: React.FC = () => {
         }
     };
 
-    const handleParagraphComplete = async (paragraph: any) => {
-        const newParagraphs = [...paragraphs, paragraph];
-        setParagraphs(newParagraphs);
-        setShowParagraphBuilder(false);
 
-        if (user && id) {
-            try {
-                const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
-                await setDoc(submissionRef, {
-                    paragraphs: newParagraphs,
-                    updatedAt: serverTimestamp()
-                }, { merge: true });
-            } catch (e) { console.error("Error saving paragraph", e); }
-        }
-        alert('Paragraph added to essay!');
-    };
-
-    const handleEssaySubmit = async () => {
-        if (!user || !id) return;
-        try {
-            const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
-            await setDoc(submissionRef, {
-                status: 'submitted',
-                submittedAt: serverTimestamp()
-            }, { merge: true });
-            alert("Essay submitted successfully!");
-            navigate('/student/dashboard');
-        } catch (e) {
-            console.error("Error submitting essay", e);
-            alert("Failed to submit essay.");
-        }
-    };
 
     if (loading) {
         return (
@@ -348,27 +317,7 @@ export const TextReader: React.FC = () => {
                 </div>
             )}
 
-            {showParagraphBuilder && (
-                <div className="fixed inset-0 z-[100] bg-white">
-                    <ParagraphBuilder
-                        annotations={annotations}
-                        onComplete={handleParagraphComplete}
-                        onBack={() => setShowParagraphBuilder(false)}
-                        textData={textData}
-                    />
-                </div>
-            )}
 
-            {showEssayAssembler && (
-                <div className="fixed inset-0 z-50 bg-background">
-                    <EssayAssembler
-                        thesis={thesis}
-                        paragraphs={paragraphs}
-                        onBack={() => setShowEssayAssembler(false)}
-                        onSubmit={handleEssaySubmit}
-                    />
-                </div>
-            )}
 
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '1rem' }} className="reader-scroll">
                 <div style={{ maxWidth: '700px', margin: '0 auto', paddingBottom: '4rem' }}>
@@ -471,10 +420,10 @@ export const TextReader: React.FC = () => {
                                         onClick={() => navigate(`/assignment/${id}/thesis`)}
                                     >
                                         <PenTool size={18} style={{ marginRight: '0.5rem' }} />
-                                        Enter Architect Mode
+                                        1. Build Thesis
                                     </button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowParagraphBuilder(true)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} />Build Paragraph</button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowEssayAssembler(true)} disabled={!thesis && paragraphs.length === 0}><Layers size={18} style={{ marginRight: '0.5rem' }} />View Essay Skeleton ({paragraphs.length})</button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/paragraphs`)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} />2. Build Paragraphs</button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/essay`)} disabled={!thesis && paragraphs.length === 0}><Layers size={18} style={{ marginRight: '0.5rem' }} />3. Final Assembly</button>
                                 </div>
                             </>
                         ) : (
