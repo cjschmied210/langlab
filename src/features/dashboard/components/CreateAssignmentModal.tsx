@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader2, Calendar } from 'lucide-react';
+import { X, Loader2, Calendar, Wand2 } from 'lucide-react'; // Added icons
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 
@@ -11,10 +11,29 @@ interface CreateAssignmentModalProps {
 
 export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ classId, onClose, onAssignmentCreated }) => {
     const [title, setTitle] = useState('');
-    const [author, setAuthor] = useState(''); // <--- New Author State
+    const [author, setAuthor] = useState('');
     const [content, setContent] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // --- NEW: Text Formatting Helper ---
+    const handleAutoFormat = () => {
+        if (!content) return;
+
+        // 1. Normalize line endings
+        let formatted = content.replace(/\r\n/g, '\n');
+
+        // 2. Collapse multiple blank lines down to single newlines first (reset)
+        formatted = formatted.replace(/\n\s*\n/g, '\n');
+
+        // 3. Expand single newlines to double newlines (creating visual gaps)
+        formatted = formatted.replace(/\n/g, '\n\n');
+
+        // 4. (Optional) Remove indentation spaces at start of lines if they exist
+        // formatted = formatted.replace(/^\s+/gm, '');
+
+        setContent(formatted);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,7 +45,7 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ cl
             await addDoc(collection(db, 'assignments'), {
                 classId,
                 title,
-                author: author.trim() || "Unknown Author", // <--- Saving the Author
+                author: author.trim() || "Unknown Author",
                 content,
                 dueDate: new Date(dueDate),
                 status: 'active',
@@ -44,7 +63,7 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ cl
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">
-            <div className="card max-w-2xl w-full p-xl relative animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+            <div className="card max-w-4xl w-full p-xl relative animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
                 <button
                     onClick={onClose}
                     className="absolute top-md right-md text-muted hover:text-primary transition-colors"
@@ -55,28 +74,16 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ cl
                 <h2 className="text-2xl font-bold text-primary mb-lg">Create New Assignment</h2>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-md flex-1 overflow-hidden">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-                        <div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
+                        <div className="md:col-span-2">
                             <label className="block text-sm font-semibold text-muted mb-xs">Assignment Title</label>
                             <input
                                 type="text"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                placeholder="e.g. JFK Inaugural Address"
+                                placeholder="e.g. The Braindead Megaphone"
                                 className="w-full p-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 required
-                            />
-                        </div>
-
-                        {/* NEW AUTHOR INPUT FIELD */}
-                        <div>
-                            <label className="block text-sm font-semibold text-muted mb-xs">Author / Speaker</label>
-                            <input
-                                type="text"
-                                value={author}
-                                onChange={(e) => setAuthor(e.target.value)}
-                                placeholder="e.g. John F. Kennedy"
-                                className="w-full p-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
 
@@ -93,15 +100,40 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({ cl
                                 <Calendar size={18} className="absolute left-sm top-1/2 -translate-y-1/2 text-muted" />
                             </div>
                         </div>
+
+                        <div className="md:col-span-3">
+                            <label className="block text-sm font-semibold text-muted mb-xs">Author / Speaker</label>
+                            <input
+                                type="text"
+                                value={author}
+                                onChange={(e) => setAuthor(e.target.value)}
+                                placeholder="e.g. George Saunders"
+                                className="w-full p-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex-1 flex flex-col min-h-0">
-                        <label className="block text-sm font-semibold text-muted mb-xs">Reading Text</label>
+                        <div className="flex justify-between items-end mb-xs">
+                            <label className="block text-sm font-semibold text-muted">Reading Text</label>
+
+                            {/* --- NEW: FORMATTING TOOLBAR --- */}
+                            <button
+                                type="button"
+                                onClick={handleAutoFormat}
+                                className="text-xs flex items-center gap-1 text-primary hover:bg-primary/5 px-2 py-1 rounded transition-colors font-medium"
+                                title="Fix spacing issues from copy-paste"
+                            >
+                                <Wand2 size={12} />
+                                Auto-Fix Paragraphs
+                            </button>
+                        </div>
+
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            placeholder="Paste the text for students to analyze here..."
-                            className="w-full p-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none flex-1 font-serif leading-relaxed"
+                            placeholder="Paste the text here. If it looks cramped, click 'Auto-Fix Paragraphs' above."
+                            className="w-full p-lg border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none flex-1 font-serif leading-relaxed text-lg"
                             style={{ minHeight: '200px' }}
                             required
                         />
