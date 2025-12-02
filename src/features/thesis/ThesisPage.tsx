@@ -32,11 +32,13 @@ export const ThesisPage: React.FC = () => {
     const [collectedVerbs, setCollectedVerbs] = useState<string[]>([]);
     const [thesis, setThesis] = useState<ThesisState>({ verb1: null, verb2: null, purpose: '' });
     const [isDragging, setIsDragging] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
             if (!id || !user) return;
             try {
+                // 1. Assignment
                 const assignSnap = await getDoc(doc(db, 'assignments', id));
                 if (assignSnap.exists()) {
                     const data = assignSnap.data();
@@ -44,6 +46,7 @@ export const ThesisPage: React.FC = () => {
                     setAuthorName(data.author || "The Author");
                 }
 
+                // 2. Annotations
                 const q = query(
                     collection(db, 'annotations'),
                     where('assignmentId', '==', id),
@@ -53,13 +56,13 @@ export const ThesisPage: React.FC = () => {
                 const verbs = annSnap.docs.map(d => d.data().verb);
                 setCollectedVerbs(Array.from(new Set(verbs)));
 
-                // Check for existing thesis work
-                const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
-                const subSnap = await getDoc(submissionRef);
+                // 3. Check for existing thesis work
+                const subRef = doc(db, 'submissions', `${user.uid}_${id}`);
+                const subSnap = await getDoc(subRef);
                 if (subSnap.exists()) {
                     const data = subSnap.data();
-                    if (data.thesisState) {
-                        setThesis(data.thesisState);
+                    if (data.thesis) {
+                        setThesis(data.thesis);
                     }
                 }
 
@@ -69,6 +72,7 @@ export const ThesisPage: React.FC = () => {
         fetchData();
     }, [id, user]);
 
+    // ... [Drag Handlers & getVerbStyle remain exactly the same] ...
     const handleDragStart = (e: React.DragEvent, verb: string) => {
         e.dataTransfer.setData('text/plain', verb);
         setIsDragging(true);
@@ -80,7 +84,6 @@ export const ThesisPage: React.FC = () => {
         setThesis(prev => ({ ...prev, [slot]: verb }));
         setIsDragging(false);
     };
-
     const getVerbStyle = (verb: string) => {
         const category = RHETORICAL_VERBS.find(cat => cat.verbs.includes(verb))?.category || "Default";
         return CATEGORY_COLORS[category] || CATEGORY_COLORS["Default"];
@@ -88,23 +91,30 @@ export const ThesisPage: React.FC = () => {
 
     const handleSave = async () => {
         if (!user || !id) return;
-
-        const thesisStatement = `${authorName} begins by ${thesis.verb1 || '[verb]'}ing, then shifts to ${thesis.verb2 || '[verb]'}ing in order to ${thesis.purpose || '[purpose]'}.`;
-
+        setIsSaving(true);
         try {
             const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
+
+            // Merge with existing data (so we don't overwrite SPACECAT)
             await setDoc(submissionRef, {
-                thesisState: thesis,
-                thesisStatement: thesisStatement,
+                userId: user.uid,
+                assignmentId: id,
+                thesis: thesis,
+                status: 'thesis_drafted',
                 updatedAt: serverTimestamp()
             }, { merge: true });
 
+            // Navigate back to reader
             navigate(`/assignment/${id}`);
         } catch (error) {
             console.error("Error saving thesis:", error);
+            alert("Failed to save thesis. Please try again.");
+        } finally {
+            setIsSaving(false);
         }
     };
 
+    // ... [DraggableToken and DropSocket components remain exactly the same] ...
     const DraggableToken = ({ verb }: { verb: string }) => {
         const style = getVerbStyle(verb);
         return (
@@ -119,7 +129,6 @@ export const ThesisPage: React.FC = () => {
                     marginBottom: '0.5rem', cursor: 'grab', boxShadow: 'var(--shadow-sm)',
                     transition: 'all 0.2s'
                 }}
-                className="hover-card"
             >
                 <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, color: 'var(--color-text)', flex: 1 }}>{verb}</span>
                 <GripVertical size={14} style={{ color: 'var(--color-text-muted)', opacity: 0.5 }} />
@@ -173,9 +182,7 @@ export const ThesisPage: React.FC = () => {
         );
     };
 
-    if (loading) {
-        return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 className="animate-spin" size={32} color="var(--color-primary)" /></div>;
-    }
+    if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 className="animate-spin" size={32} color="var(--color-primary)" /></div>;
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fa' }}>
@@ -195,11 +202,17 @@ export const ThesisPage: React.FC = () => {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button onClick={() => navigate(`/assignment/${id}`)} className="btn btn-outline" style={{ fontSize: '0.8rem' }}>
+                    <button className="btn btn-outline" style={{ fontSize: '0.8rem' }}>
                         <BookOpen size={16} style={{ marginRight: '0.5rem' }} /> Reference Text
                     </button>
-                    <button onClick={handleSave} className="btn btn-primary" disabled={!thesis.verb1 || !thesis.verb2 || !thesis.purpose} style={{ fontSize: '0.8rem', opacity: (!thesis.verb1 || !thesis.verb2 || !thesis.purpose) ? 0.5 : 1 }}>
-                        <Save size={16} style={{ marginRight: '0.5rem' }} /> Save Thesis
+                    <button
+                        onClick={handleSave}
+                        disabled={!thesis.verb1 || !thesis.verb2 || !thesis.purpose || isSaving}
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.8rem', opacity: (!thesis.verb1 || !thesis.verb2 || !thesis.purpose) ? 0.5 : 1 }}
+                    >
+                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} style={{ marginRight: '0.5rem' }} />}
+                        {isSaving ? 'Saving...' : 'Save Thesis'}
                     </button>
                 </div>
             </header>
