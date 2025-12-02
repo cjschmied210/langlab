@@ -227,35 +227,37 @@ export const TextReader: React.FC = () => {
 
     const renderScavengerContent = () => {
         // 1. Intelligent Splitting
-        // Try splitting by double newlines first (standard paragraphs)
-        let paragraphs = textData.content.split('\n\n');
+        let rawParagraphs = textData.content.split('\n\n');
 
-        // If that results in only 1 giant block (and the text is long), 
-        // fallback to splitting by single newlines
-        if (paragraphs.length === 1 && textData.content.length > 200) {
-            paragraphs = textData.content.split('\n');
+        // Fallback for single line breaks if double breaks aren't found
+        if (rawParagraphs.length === 1 && textData.content.length > 200) {
+            rawParagraphs = textData.content.split('\n');
         }
 
-        // 2. Cleanup
-        // Remove empty or whitespace-only paragraphs so the "First" paragraph isn't just a blank line
-        paragraphs = paragraphs.filter(p => p.trim().length > 0);
+        // 2. CRITICAL FIX: Filter out empty/whitespace-only paragraphs
+        // This ensures index 0 is ALWAYS the first real paragraph of text
+        const paragraphs = rawParagraphs.filter(p => p.trim().length > 0);
 
         return (
             <div className="space-y-6">
                 {paragraphs.map((para, index) => {
                     const isFirst = index === 0;
                     const isLast = index === paragraphs.length - 1;
+
+                    // Logic: Blur everything EXCEPT the first and last real paragraphs
                     const isBlurred = !isFirst && !isLast;
 
                     return (
                         <p
                             key={index}
-                            className="text-lg leading-relaxed"
                             style={{
                                 filter: isBlurred ? 'blur(5px)' : 'none',
                                 userSelect: isBlurred ? 'none' : 'text',
                                 opacity: isBlurred ? 0.5 : 1,
-                                transition: 'all 0.5s ease'
+                                transition: 'all 0.5s ease',
+                                lineHeight: '1.8',
+                                fontSize: '1.15rem',
+                                marginBottom: '1.5rem'
                             }}
                         >
                             {para}
