@@ -6,6 +6,7 @@ import { TeacherDashboard } from './features/dashboard/TeacherDashboard';
 import { AssignmentDetail } from './features/dashboard/AssignmentDetail';
 import { TeacherReview } from './features/teacher/TeacherReview';
 import { StudentDashboard } from './features/dashboard/StudentDashboard';
+import { ThesisPage } from './features/thesis/ThesisPage';
 import { Login } from './pages/Login';
 import { Onboarding } from './pages/Onboarding';
 import { AuthProvider } from './contexts/AuthContext';
@@ -30,6 +31,14 @@ function App() {
             <Route index element={<Home />} />
             <Route path="reader" element={<TextReader />} />
             <Route path="assignment/:id" element={<TextReader />} />
+            <Route
+              path="assignment/:id/thesis"
+              element={
+                <ProtectedRoute>
+                  <ThesisPage />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="teacher/dashboard"

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
     doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot,
     deleteDoc, updateDoc, serverTimestamp
@@ -7,7 +7,6 @@ import {
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SAMPLE_TEXT } from './data';
-import { ThesisBuilder } from '../thesis/ThesisBuilder';
 import { ParagraphBuilder } from '../writer/ParagraphBuilder';
 import { EssayAssembler } from '../writer/EssayAssembler';
 import {
@@ -39,6 +38,7 @@ interface SpacecatData {
 
 export const TextReader: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [textData, setTextData] = useState(SAMPLE_TEXT);
     const [loading, setLoading] = useState(!!id);
@@ -48,7 +48,6 @@ export const TextReader: React.FC = () => {
     });
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
-    const [showThesisBuilder, setShowThesisBuilder] = useState(false);
     const [showParagraphBuilder, setShowParagraphBuilder] = useState(false);
     const [showEssayAssembler, setShowEssayAssembler] = useState(false);
     const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -97,9 +96,15 @@ export const TextReader: React.FC = () => {
             try {
                 const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
                 const docSnap = await getDoc(submissionRef);
-                if (docSnap.exists() && docSnap.data().spacecat) {
-                    setSpacecatData(docSnap.data().spacecat);
-                    setPhase('annotation');
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.spacecat) {
+                        setSpacecatData(data.spacecat);
+                        setPhase('annotation');
+                    }
+                    if (data.thesisStatement) {
+                        setThesis(data.thesisStatement);
+                    }
                 }
             } catch (error) {
                 console.error("Error checking submission:", error);
@@ -260,10 +265,7 @@ export const TextReader: React.FC = () => {
         setShowParagraphBuilder(false);
     };
 
-    const handleThesisSave = (newThesis: string) => {
-        setThesis(newThesis);
-        setShowThesisBuilder(false);
-    };
+
 
     if (loading) return <div className="flex items-center justify-center h-screen"><Loader2 size={32} className="animate-spin text-primary" /></div>;
     if (showEssayAssembler) return <EssayAssembler thesis={thesis} paragraphs={paragraphs} onBack={() => setShowEssayAssembler(false)} />;
@@ -314,15 +316,6 @@ export const TextReader: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )}
-
-            {showThesisBuilder && (
-                <ThesisBuilder
-                    authorName={textData.author}
-                    availableVerbs={annotations.map(a => a.verb)}
-                    onClose={() => setShowThesisBuilder(false)}
-                    onSave={handleThesisSave}
-                />
             )}
 
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '1rem' }} className="reader-scroll">
@@ -420,7 +413,14 @@ export const TextReader: React.FC = () => {
                                         <Check size={18} style={{ marginRight: '0.5rem' }} />
                                         Context Analyzed (SPACECAT)
                                     </button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowThesisBuilder(true)}><PenTool size={18} style={{ marginRight: '0.5rem' }} />Build Thesis</button>
+                                    <button
+                                        className="btn btn-outline"
+                                        style={{ width: '100%' }}
+                                        onClick={() => navigate(`/assignment/${id}/thesis`)}
+                                    >
+                                        <PenTool size={18} style={{ marginRight: '0.5rem' }} />
+                                        Enter Architect Mode
+                                    </button>
                                     <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowParagraphBuilder(true)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} />Build Paragraph</button>
                                     <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setShowEssayAssembler(true)} disabled={!thesis && paragraphs.length === 0}><Layers size={18} style={{ marginRight: '0.5rem' }} />View Essay Skeleton ({paragraphs.length})</button>
                                 </div>
