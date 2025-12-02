@@ -21,6 +21,39 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
     "Default": { bg: "#f9fafb", text: "#374151", border: "#e5e7eb", shadow: "rgba(107, 114, 128, 0.15)" }
 };
 
+// NEW HELPER FUNCTION
+const toGerund = (verb: string) => {
+    // 1. Handle "ies" (Amplifies -> Amplifying)
+    if (verb.endsWith('ies')) {
+        return verb.slice(0, -3) + 'ying';
+    }
+
+    // 2. Handle "es" where base ends in s, x, z, ch, sh (Digresses -> Digressing)
+    // This is tricky, but for "Digresses", "Expresses", etc., we remove 'es' + 'ing'.
+    // However, "Juxtaposes" ends in 'es' but base is 'Juxtapose', so we drop 's' -> 'Juxtapose' -> drop 'e' -> 'Juxtaposing'.
+    // Let's simplify for the academic list:
+
+    if (verb.endsWith('sses') || verb.endsWith('hes')) {
+        // Digresses -> Digress -> Digressing
+        // Distinguishes -> Distinguish -> Distinguishing
+        return verb.slice(0, -2) + 'ing';
+    }
+
+    if (verb.endsWith('es')) {
+        // Juxtaposes -> Juxtaposing
+        // Underscores -> Underscoring
+        return verb.slice(0, -2) + 'ing';
+    }
+
+    // 3. Handle standard "s" (Highlights -> Highlighting)
+    if (verb.endsWith('s')) {
+        return verb.slice(0, -1) + 'ing';
+    }
+
+    // Fallback (shouldn't happen with your list, but good safety)
+    return verb + 'ing';
+};
+
 export const ThesisPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -163,7 +196,7 @@ export const ThesisPage: React.FC = () => {
                     {currentVerb ? (
                         <>
                             <span style={{ fontSize: '1.1rem', fontFamily: 'var(--font-serif)', fontWeight: 700, color: style?.text }}>
-                                {currentVerb}ing
+                                {toGerund(currentVerb)}
                             </span>
                             <button
                                 onClick={() => setThesis(p => ({ ...p, [slot]: null }))}
@@ -252,11 +285,11 @@ export const ThesisPage: React.FC = () => {
                             <p style={{ fontSize: '1.5rem', fontFamily: 'var(--font-serif)', lineHeight: 1.6, color: 'var(--color-text)' }}>
                                 <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{authorName}</span> begins by
                                 <span style={{ margin: '0 0.5rem', padding: '0 0.25rem', borderBottom: thesis.verb1 ? '2px solid var(--color-primary)' : '2px dashed var(--color-border)', color: thesis.verb1 ? 'var(--color-primary)' : 'var(--color-text-muted)', fontStyle: thesis.verb1 ? 'normal' : 'italic' }}>
-                                    {thesis.verb1 ? `${thesis.verb1}ing` : " [strategy] "}
+                                    {thesis.verb1 ? toGerund(thesis.verb1) : " [strategy] "}
                                 </span>
                                 , then shifts to
                                 <span style={{ margin: '0 0.5rem', padding: '0 0.25rem', borderBottom: thesis.verb2 ? '2px solid var(--color-primary)' : '2px dashed var(--color-border)', color: thesis.verb2 ? 'var(--color-primary)' : 'var(--color-text-muted)', fontStyle: thesis.verb2 ? 'normal' : 'italic' }}>
-                                    {thesis.verb2 ? `${thesis.verb2}ing` : " [strategy] "}
+                                    {thesis.verb2 ? toGerund(thesis.verb2) : " [strategy] "}
                                 </span>
                                 {' '}in order to{' '}
                                 <span style={{ margin: '0 0.5rem', padding: '0 0.25rem', borderBottom: thesis.purpose ? '2px solid var(--color-accent)' : '2px dashed var(--color-border)', color: thesis.purpose ? 'var(--color-text)' : 'var(--color-text-muted)', fontStyle: thesis.purpose ? 'normal' : 'italic' }}>
