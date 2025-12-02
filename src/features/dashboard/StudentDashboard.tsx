@@ -79,8 +79,8 @@ export const StudentDashboard: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-screen">
-                <Loader2 size={32} className="animate-spin text-primary" />
+            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Loader2 size={32} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
             </div>
         );
     }
@@ -88,30 +88,30 @@ export const StudentDashboard: React.FC = () => {
     const inProgressCount = assignments.filter(a => startedAssignmentIds.has(a.id)).length;
 
     return (
-        <div className="container max-w-4xl mx-auto py-12">
+        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '3rem 1rem' }}>
 
             {/* Hero Section */}
-            <header className="mb-12">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <header style={{ marginBottom: '3rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1.5rem', flexWrap: 'wrap' }}>
                     <div>
-                        <div className="text-sm font-bold text-muted uppercase tracking-widest mb-2 flex items-center gap-2">
-                            <Sparkles size={14} className="text-accent" />
+                        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Sparkles size={14} style={{ color: 'var(--color-accent)' }} />
                             Student Dashboard
                         </div>
-                        <h1 className="text-4xl font-serif font-bold text-primary">
+                        <h1 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-serif)', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
                             {getGreeting()}, {user?.displayName?.split(' ')[0]}
                         </h1>
                     </div>
 
                     {/* Mini Stats */}
-                    <div className="flex gap-4">
-                        <div className="bg-white p-4 rounded-xl border border-border shadow-sm min-w-[120px]">
-                            <div className="text-3xl font-bold text-primary mb-1">{assignments.length}</div>
-                            <div className="text-xs text-muted font-bold uppercase">Active Tasks</div>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)', minWidth: '120px' }}>
+                            <div style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.25rem', lineHeight: 1 }}>{assignments.length}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Active Tasks</div>
                         </div>
-                        <div className="bg-white p-4 rounded-xl border border-border shadow-sm min-w-[120px]">
-                            <div className="text-3xl font-bold text-accent mb-1">{inProgressCount}</div>
-                            <div className="text-xs text-muted font-bold uppercase">In Progress</div>
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)', minWidth: '120px' }}>
+                            <div style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.25rem', lineHeight: 1 }}>{inProgressCount}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>In Progress</div>
                         </div>
                     </div>
                 </div>
@@ -119,21 +119,21 @@ export const StudentDashboard: React.FC = () => {
 
             {/* Assignments Feed */}
             <section>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-text flex items-center gap-2">
-                        <BookOpen size={20} className="text-muted" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                        <BookOpen size={20} style={{ color: 'var(--color-text-muted)' }} />
                         Your Readings
                     </h2>
                 </div>
 
-                <div className="grid gap-4">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {assignments.length === 0 ? (
-                        <div className="text-center py-16 border-2 border-dashed border-border rounded-xl bg-background">
-                            <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4 text-muted">
+                        <div style={{ textAlign: 'center', padding: '4rem', border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-background)' }}>
+                            <div style={{ width: '4rem', height: '4rem', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto', color: 'var(--color-text-muted)' }}>
                                 <Sparkles size={24} />
                             </div>
-                            <h3 className="text-lg font-bold text-text mb-2">All caught up!</h3>
-                            <p className="text-muted max-w-xs mx-auto">
+                            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>All caught up!</h3>
+                            <p style={{ color: 'var(--color-text-muted)', maxWidth: '300px', margin: '0 auto' }}>
                                 No active assignments right now. Take a break or explore past readings.
                             </p>
                         </div>
@@ -147,30 +147,49 @@ export const StudentDashboard: React.FC = () => {
                                 <div
                                     key={assignment.id}
                                     onClick={() => navigate(`/assignment/${assignment.id}`)}
-                                    className="group relative bg-white rounded-xl border border-border p-6 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer overflow-hidden"
+                                    style={{
+                                        position: 'relative',
+                                        backgroundColor: 'white',
+                                        borderRadius: 'var(--radius-lg)',
+                                        border: '1px solid var(--color-border)',
+                                        padding: '1.5rem',
+                                        cursor: 'pointer',
+                                        overflow: 'hidden',
+                                        transition: 'all 0.2s',
+                                        boxShadow: 'var(--shadow-sm)',
+                                        display: 'flex',
+                                        flexDirection: 'column'
+                                    }}
+                                    className="hover-card"
                                 >
                                     {/* Left Border Status Indicator */}
-                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${isStarted ? 'bg-accent' : 'bg-muted/30 group-hover:bg-primary'} transition-colors`} />
+                                    <div style={{
+                                        position: 'absolute',
+                                        left: 0, top: 0, bottom: 0,
+                                        width: '4px',
+                                        backgroundColor: isStarted ? 'var(--color-accent)' : 'transparent',
+                                        transition: 'background-color 0.2s'
+                                    }} />
 
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pl-2">
+                                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem', paddingLeft: '0.5rem' }}>
 
                                         {/* Main Info */}
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-xs font-bold text-muted uppercase tracking-wider bg-background px-2 py-1 rounded border border-border">
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', backgroundColor: 'var(--color-background)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}>
                                                     {className}
                                                 </span>
                                                 {isDueSoon && (
-                                                    <span className="text-xs font-bold text-error flex items-center gap-1 bg-error/5 px-2 py-1 rounded">
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
                                                         <Clock size={12} /> Due Soon
                                                     </span>
                                                 )}
                                             </div>
-                                            <h3 className="text-xl font-bold text-primary mb-1 font-serif group-hover:text-blue-700 transition-colors">
+                                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.25rem', fontFamily: 'var(--font-serif)' }}>
                                                 {assignment.title}
                                             </h3>
-                                            <div className="text-sm text-muted flex items-center gap-4">
-                                                <span className="flex items-center gap-1">
+                                            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                                     <Calendar size={14} />
                                                     {assignment.dueDate ? assignment.dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No Due Date'}
                                                 </span>
@@ -178,16 +197,16 @@ export const StudentDashboard: React.FC = () => {
                                         </div>
 
                                         {/* Action Area */}
-                                        <div className="flex items-center gap-4">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                             {isStarted ? (
-                                                <div className="text-right">
-                                                    <div className="text-xs font-bold text-accent uppercase mb-1">In Progress</div>
-                                                    <button className="btn btn-primary bg-accent hover:bg-amber-600 text-white border-none text-sm px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>In Progress</div>
+                                                    <button className="btn btn-primary" style={{ backgroundColor: 'var(--color-accent)', borderColor: 'var(--color-accent)', fontSize: '0.875rem', padding: '0.5rem 1rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                         Continue <ChevronRight size={16} />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <button className="btn btn-outline text-sm px-6 py-2 rounded-full flex items-center gap-2 group-hover:bg-primary group-hover:text-white transition-all">
+                                                <button className="btn btn-outline" style={{ fontSize: '0.875rem', padding: '0.5rem 1.5rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                     <Play size={16} /> Start Reading
                                                 </button>
                                             )}
