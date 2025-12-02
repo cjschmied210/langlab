@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Loader2, FileText, Calendar, ChevronRight, Eye } from 'lucide-react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { Plus, BookOpen, Loader2, FileText, Calendar, ChevronRight, Eye, Trash2 } from 'lucide-react';
+import { collection, query, where, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateClassModal } from './components/CreateClassModal';
@@ -90,6 +90,19 @@ export const TeacherDashboard: React.FC = () => {
     const handleClassDeleted = () => {
         setActiveClass(null);
         fetchClasses();
+    };
+
+    const handleDeleteAssignment = async (assignmentId: string) => {
+        if (!window.confirm("Are you sure you want to delete this assignment? This action cannot be undone.")) return;
+
+        try {
+            await deleteDoc(doc(db, 'assignments', assignmentId));
+            // Ideally we should also delete related annotations and submissions, but for now we'll just delete the assignment doc.
+            fetchAssignments();
+        } catch (error) {
+            console.error("Error deleting assignment:", error);
+            alert("Failed to delete assignment.");
+        }
     };
 
     if (loading) {
@@ -204,7 +217,7 @@ export const TeacherDashboard: React.FC = () => {
                                             </div>
 
                                             {/* Right Section: Stats & Chevron */}
-                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2rem' }}>
+                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem' }}>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -215,7 +228,19 @@ export const TeacherDashboard: React.FC = () => {
                                                     <Eye size={16} />
                                                     Review Work
                                                 </button>
-                                                <div className="text-right">
+
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteAssignment(assignment.id);
+                                                    }}
+                                                    className="btn btn-ghost text-muted hover:text-error p-sm transition-colors"
+                                                    title="Delete Assignment"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+
+                                                <div className="text-right pl-4 border-l border-border">
                                                     <div className="text-sm font-semibold text-muted mb-xs">
                                                         0 / {activeClass.studentIds?.length || 0} Submitted
                                                     </div>
