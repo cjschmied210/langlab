@@ -7,7 +7,6 @@ import {
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SAMPLE_TEXT } from './data';
-
 import {
     Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers,
     Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle,
@@ -78,11 +77,7 @@ export const TextReader: React.FC = () => {
                         content: data.content
                     });
                 }
-            } catch (error) {
-                console.error("Error fetching assignment:", error);
-            } finally {
-                setLoading(false);
-            }
+            } catch (error) { console.error(error); } finally { setLoading(false); }
         };
         fetchAssignment();
     }, [id]);
@@ -106,9 +101,7 @@ export const TextReader: React.FC = () => {
                         setParagraphs(data.paragraphs);
                     }
                 }
-            } catch (error) {
-                console.error("Error checking submission:", error);
-            }
+            } catch (error) { console.error(error); }
         };
         checkSubmission();
     }, [user, id]);
@@ -137,34 +130,19 @@ export const TextReader: React.FC = () => {
             return;
         }
         const range = windowSelection.getRangeAt(0);
-        if (!contentRef.current.contains(range.commonAncestorContainer)) {
-            setSelection(null);
-            return;
-        }
+        if (!contentRef.current.contains(range.commonAncestorContainer)) return;
         const start = getAbsoluteOffset(contentRef.current, range.startContainer, range.startOffset);
         const end = start + range.toString().length;
         setSelection({ text: windowSelection.toString(), range: range, start, end });
-        setSidebarMode('create');
-        setCreateStep('verb');
-        setSelectedVerb(null);
-        setCommentary('');
-        setEditingAnnotationId(null);
+        setSidebarMode('create'); setCreateStep('verb'); setSelectedVerb(null); setCommentary(''); setEditingAnnotationId(null);
     };
 
-    const handleVerbSelect = (verb: string) => {
-        setSelectedVerb(verb);
-        setCreateStep('commentary');
-    };
-
+    const handleVerbSelect = (verb: string) => { setSelectedVerb(verb); setCreateStep('commentary'); };
     const handleEditAnnotation = (ann: Annotation) => {
-        setEditingAnnotationId(ann.id);
-        setSelectedVerb(ann.verb);
-        setCommentary(ann.commentary || '');
+        setEditingAnnotationId(ann.id); setSelectedVerb(ann.verb); setCommentary(ann.commentary || '');
         setSelection({ text: ann.text, start: ann.startOffset, end: ann.endOffset, range: null });
-        setSidebarMode('create');
-        setCreateStep('commentary');
+        setSidebarMode('create'); setCreateStep('commentary');
     };
-
     const handleSaveAnnotation = async () => {
         if (!selection || !selectedVerb || !user || !id) return;
         try {
@@ -178,32 +156,20 @@ export const TextReader: React.FC = () => {
                     userId: user.uid, assignmentId: id, createdAt: new Date()
                 });
             }
-            setSelection(null); setSidebarMode('list'); setCreateStep('verb'); setSelectedVerb(null); setCommentary(''); setEditingAnnotationId(null);
-            window.getSelection()?.removeAllRanges();
-        } catch (error) {
-            console.error("Error saving annotation:", error);
-        }
+            handleCancelAnnotation();
+        } catch (error) { console.error(error); }
     };
-
     const handleDeleteAnnotation = async (annotationId: string) => {
-        if (!confirm("Delete this annotation?")) return;
+        if (!confirm("Delete?")) return;
         try { await deleteDoc(doc(db, 'annotations', annotationId)); } catch (error) { console.error(error); }
     };
-
     const handleCancelAnnotation = () => {
         setSelection(null); setSidebarMode('list'); setEditingAnnotationId(null);
         window.getSelection()?.removeAllRanges();
     };
-
     const handleScrollToAnnotation = (annotationId: string) => {
         const element = document.getElementById(`annotation-${annotationId}`);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            element.style.transition = 'background-color 0.5s';
-            const originalColor = element.style.backgroundColor;
-            element.style.backgroundColor = 'yellow';
-            setTimeout(() => { element.style.backgroundColor = originalColor; }, 1000);
-        }
+        if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     const renderHighlightedContent = () => {
@@ -225,18 +191,17 @@ export const TextReader: React.FC = () => {
         return chunks;
     };
 
-    // --- UPDATED: Robust Scavenger Content Renderer ---
+    // --- FIXED SCAVENGER RENDERER ---
     const renderScavengerContent = () => {
-        // 1. Try basic split
+        // 1. Attempt intelligent splitting
         let paragraphs = textData.content.split('\n\n');
 
-        // 2. Fallback: If double-newline split failed (cramped text), use single newline
-        if (paragraphs.length === 1 && textData.content.length > 100) {
+        // 2. Fallback: If splitting failed (e.g. single lines), force split by newline
+        if (paragraphs.length <= 1 && textData.content.length > 100) {
             paragraphs = textData.content.split('\n');
         }
 
-        // 3. THE FIX: Filter out empty/whitespace paragraphs
-        // This prevents an invisible "first paragraph" from stealing the 'isFirst' slot
+        // 3. FILTER EMPTY LINES: Critical for ensuring "First Paragraph" is actual text
         paragraphs = paragraphs.filter(p => p.trim().length > 0);
 
         return (
@@ -254,7 +219,7 @@ export const TextReader: React.FC = () => {
                                 userSelect: isBlurred ? 'none' : 'text',
                                 opacity: isBlurred ? 0.5 : 1,
                                 transition: 'all 0.5s ease',
-                                marginBottom: '1.5rem' // Ensure visual gap
+                                marginBottom: '1.5rem' // Add spacing manually for readability
                             }}
                         >
                             {para}
@@ -272,8 +237,7 @@ export const TextReader: React.FC = () => {
     };
 
     const validateSpacecat = async () => {
-        setIsValidating(true);
-        setValidationError(null);
+        setIsValidating(true); setValidationError(null);
         const { speaker, purpose, audience, context, exigence } = spacecatData;
         if (speaker.length < 3 || purpose.length < 5 || audience.length < 3 || context.length < 10 || exigence.length < 10) {
             setValidationError("Please provide more detail for all fields."); setIsValidating(false); return;
@@ -284,12 +248,7 @@ export const TextReader: React.FC = () => {
                 userId: user!.uid, assignmentId: id, spacecat: spacecatData, status: 'started', updatedAt: serverTimestamp()
             }, { merge: true });
             setPhase('annotation');
-        } catch (error) {
-            console.error("Error saving progress:", error);
-            setPhase('annotation');
-        } finally {
-            setIsValidating(false);
-        }
+        } catch (error) { console.error(error); setPhase('annotation'); } finally { setIsValidating(false); }
     };
 
     if (loading) return <div className="flex items-center justify-center h-screen"><Loader2 size={32} className="animate-spin text-primary" /></div>;
@@ -301,17 +260,10 @@ export const TextReader: React.FC = () => {
                     <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center p-6 border-b border-border bg-background">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                                    <Sparkles size={24} />
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-bold font-serif text-primary">Rhetorical Context</h2>
-                                    <p className="text-sm text-muted">Your analysis of the rhetorical situation.</p>
-                                </div>
+                                <div className="p-2 bg-primary/10 rounded-lg text-primary"><Sparkles size={24} /></div>
+                                <div><h2 className="text-xl font-bold font-serif text-primary">Rhetorical Context</h2><p className="text-sm text-muted">Your analysis.</p></div>
                             </div>
-                            <button onClick={() => setShowSpacecatReview(false)} className="p-2 hover:bg-muted/10 rounded-full transition-colors text-muted">
-                                <X size={24} />
-                            </button>
+                            <button onClick={() => setShowSpacecatReview(false)} className="p-2 hover:bg-muted/10 rounded-full text-muted"><X size={24} /></button>
                         </div>
                         <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
                             {[
@@ -324,13 +276,9 @@ export const TextReader: React.FC = () => {
                                 <div key={field.id} className="group bg-background border border-border rounded-lg p-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-muted">{field.icon}</span>
-                                        <span className="text-xs font-bold text-muted uppercase tracking-wider">
-                                            <span className="text-primary">{field.highlight}</span>{field.label.slice(1)}
-                                        </span>
+                                        <span className="text-xs font-bold text-muted uppercase tracking-wider"><span className="text-primary">{field.highlight}</span>{field.label.slice(1)}</span>
                                     </div>
-                                    <div className="font-serif text-lg text-foreground leading-relaxed">
-                                        {spacecatData[field.id as keyof SpacecatData]}
-                                    </div>
+                                    <div className="font-serif text-lg text-foreground leading-relaxed">{spacecatData[field.id as keyof SpacecatData]}</div>
                                 </div>
                             ))}
                         </div>
@@ -345,9 +293,7 @@ export const TextReader: React.FC = () => {
                 <div style={{ maxWidth: '700px', margin: '0 auto', paddingBottom: '4rem' }}>
                     <header className="mb-lg text-center">
                         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{textData.title}</h1>
-                        <div className="text-muted" style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
-                            {textData.author}, {textData.date}
-                        </div>
+                        <div className="text-muted" style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>{textData.author}, {textData.date}</div>
                     </header>
                     <div ref={contentRef} onMouseUp={handleMouseUp} style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', lineHeight: '1.8', color: 'var(--color-text)', whiteSpace: 'pre-wrap' }}>
                         {phase === 'scavenger' ? renderScavengerContent() : renderHighlightedContent()}
@@ -373,7 +319,7 @@ export const TextReader: React.FC = () => {
                                 { id: 'speaker', label: 'Speaker', icon: <User size={16} />, placeholder: 'Who is writing/speaking?', highlight: 'S' },
                                 { id: 'purpose', label: 'Purpose', icon: <Target size={16} />, placeholder: 'What do they want to achieve?', highlight: 'P', isArea: true },
                                 { id: 'audience', label: 'Audience', icon: <Users size={16} />, placeholder: 'Who is the intended target?', highlight: 'A' },
-                                { id: 'context', label: 'Context', icon: <Globe size={16} />, placeholder: 'What is happening in the world?', highlight: 'C', isArea: true },
+                                { id: 'context', label: 'Context', icon: <Globe size={16} />, placeholder: 'What is happening in the world?', highlight: 'C' },
                                 { id: 'exigence', label: 'Exigence', icon: <Zap size={16} />, placeholder: 'Why write this NOW? The spark.', highlight: 'E', isArea: true }
                             ].map((field) => (
                                 <div key={field.id} className="group bg-background focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 border border-transparent focus-within:border-primary/50 rounded-lg transition-all duration-200">
@@ -428,24 +374,14 @@ export const TextReader: React.FC = () => {
                                     </div>
                                 )}
                                 <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                                    <button
-                                        className="btn btn-outline text-success border-success hover:bg-success/10"
-                                        style={{ width: '100%' }}
-                                        onClick={() => setShowSpacecatReview(true)}
-                                    >
-                                        <Check size={18} style={{ marginRight: '0.5rem' }} />
-                                        Context Analyzed (SPACECAT)
+                                    <button className="btn btn-outline text-success border-success hover:bg-success/10" style={{ width: '100%' }} onClick={() => setShowSpacecatReview(true)}>
+                                        <Check size={18} style={{ marginRight: '0.5rem' }} /> Context Analyzed
                                     </button>
-                                    <button
-                                        className="btn btn-outline"
-                                        style={{ width: '100%' }}
-                                        onClick={() => navigate(`/assignment/${id}/thesis`)}
-                                    >
-                                        <PenTool size={18} style={{ marginRight: '0.5rem' }} />
-                                        Enter Architect Mode
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/thesis`)}>
+                                        <PenTool size={18} style={{ marginRight: '0.5rem' }} /> 1. Build Thesis
                                     </button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/paragraphs`)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} />Build Paragraph</button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/essay`)} disabled={!thesis && paragraphs.length === 0}><Layers size={18} style={{ marginRight: '0.5rem' }} />View Essay Skeleton ({paragraphs.length})</button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/paragraphs`)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} /> 2. Build Paragraphs</button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/essay`)}><Layers size={18} style={{ marginRight: '0.5rem' }} /> 3. Final Assembly</button>
                                 </div>
                             </>
                         ) : (
