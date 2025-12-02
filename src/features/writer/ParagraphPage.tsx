@@ -56,31 +56,35 @@ export const ParagraphPage: React.FC = () => {
         } catch (e) { console.error(e); }
     };
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-[#f8f9fa]"><Loader2 className="animate-spin text-primary" /></div>;
+    if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa' }}><Loader2 className="animate-spin" size={32} color="var(--color-primary)" /></div>;
 
     return (
-        <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans">
+        <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
             {/* Clean Header */}
-            <header className="bg-white border-b border-border px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="btn btn-ghost p-2 text-muted"><ArrowLeft size={20} /></button>
+            <header style={{ backgroundColor: 'white', borderBottom: '1px solid var(--color-border)', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10, boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ padding: '0.5rem', color: 'var(--color-text-muted)' }}>
+                        <ArrowLeft size={20} />
+                    </button>
                     <div>
-                        <h1 className="text-xl font-bold font-serif text-primary flex items-center gap-2">
+                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Layout size={20} /> Paragraph Builder
                         </h1>
-                        <p className="text-xs text-muted uppercase tracking-wider">Drafting for: <span className="text-primary font-semibold">{assignmentTitle}</span></p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                            Drafting for: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{assignmentTitle}</span>
+                        </p>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <button className="btn btn-outline text-xs flex items-center gap-2" onClick={() => navigate(`/assignment/${id}/essay`)}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn btn-outline" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => navigate(`/assignment/${id}/essay`)}>
                         <Sparkles size={14} /> Go to Essay Assembly
                     </button>
                 </div>
             </header>
 
             {/* Main Workspace */}
-            <main className="flex-1 container mx-auto max-w-7xl p-8">
-                <div className="grid grid-cols-1 gap-8">
+            <main style={{ flex: 1, maxWidth: '1280px', margin: '0 auto', padding: '2rem', width: '100%' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
                     <ParagraphBuilder
                         annotations={annotations}
                         onBack={() => navigate(-1)}
@@ -90,17 +94,17 @@ export const ParagraphPage: React.FC = () => {
 
                 {/* Show Saved Paragraphs Preview */}
                 {existingParagraphs.length > 0 && (
-                    <div className="mt-12 pt-8 border-t border-dashed border-border">
-                        <h3 className="text-muted font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px dashed var(--color-border)' }}>
+                        <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <CheckCircle2 size={16} /> Completed Paragraphs ({existingParagraphs.length})
                         </h3>
-                        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                             {existingParagraphs.map((p, i) => (
-                                <div key={i} className="p-4 bg-white rounded-lg border border-border shadow-sm">
-                                    <div className="text-xs font-bold text-primary mb-2 uppercase tracking-wide">Paragraph {i + 1}</div>
-                                    <div className="text-sm text-muted space-y-2">
-                                        <p><strong>Claim:</strong> {p.claimVerb?.verb}</p>
-                                        <p className="italic line-clamp-2">"{p.evidence}"</p>
+                                <div key={i} style={{ padding: '1rem', backgroundColor: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Paragraph {i + 1}</div>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <p style={{ margin: 0 }}><strong>Claim:</strong> {p.claimVerb?.verb}</p>
+                                        <p style={{ margin: 0, fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>"{p.evidence}"</p>
                                     </div>
                                 </div>
                             ))}

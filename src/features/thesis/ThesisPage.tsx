@@ -23,34 +23,10 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
 
 // NEW HELPER FUNCTION
 const toGerund = (verb: string) => {
-    // 1. Handle "ies" (Amplifies -> Amplifying)
-    if (verb.endsWith('ies')) {
-        return verb.slice(0, -3) + 'ying';
-    }
-
-    // 2. Handle "es" where base ends in s, x, z, ch, sh (Digresses -> Digressing)
-    // This is tricky, but for "Digresses", "Expresses", etc., we remove 'es' + 'ing'.
-    // However, "Juxtaposes" ends in 'es' but base is 'Juxtapose', so we drop 's' -> 'Juxtapose' -> drop 'e' -> 'Juxtaposing'.
-    // Let's simplify for the academic list:
-
-    if (verb.endsWith('sses') || verb.endsWith('hes')) {
-        // Digresses -> Digress -> Digressing
-        // Distinguishes -> Distinguish -> Distinguishing
-        return verb.slice(0, -2) + 'ing';
-    }
-
-    if (verb.endsWith('es')) {
-        // Juxtaposes -> Juxtaposing
-        // Underscores -> Underscoring
-        return verb.slice(0, -2) + 'ing';
-    }
-
-    // 3. Handle standard "s" (Highlights -> Highlighting)
-    if (verb.endsWith('s')) {
-        return verb.slice(0, -1) + 'ing';
-    }
-
-    // Fallback (shouldn't happen with your list, but good safety)
+    if (verb.endsWith('ies')) return verb.slice(0, -3) + 'ying'; // Amplifies -> Amplifying
+    if (verb.endsWith('sses') || verb.endsWith('hes')) return verb.slice(0, -2) + 'ing'; // Digresses -> Digressing
+    if (verb.endsWith('es')) return verb.slice(0, -2) + 'ing'; // Juxtaposes -> Juxtaposing
+    if (verb.endsWith('s')) return verb.slice(0, -1) + 'ing'; // Highlights -> Highlighting
     return verb + 'ing';
 };
 

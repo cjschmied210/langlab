@@ -6,6 +6,14 @@ import { ArrowLeft, FileText, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { EssayAssembler } from './EssayAssembler';
 
+const toGerund = (verb: string) => {
+    if (verb.endsWith('ies')) return verb.slice(0, -3) + 'ying';
+    if (verb.endsWith('sses') || verb.endsWith('hes')) return verb.slice(0, -2) + 'ing';
+    if (verb.endsWith('es')) return verb.slice(0, -2) + 'ing';
+    if (verb.endsWith('s')) return verb.slice(0, -1) + 'ing';
+    return verb + 'ing';
+};
+
 export const EssayPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -28,7 +36,8 @@ export const EssayPage: React.FC = () => {
                     const data = subSnap.data();
                     if (data.thesis) {
                         const t = data.thesis;
-                        setThesis(`${t.verb1 ? t.verb1 + 'ing' : '...'}, then shifts to ${t.verb2 ? t.verb2 + 'ing' : '...'} in order to ${t.purpose || '...'}.`);
+                        // FIX: Use toGerund here to avoid "Highlightsing"
+                        setThesis(`${t.verb1 ? toGerund(t.verb1) : '...'}, then shifts to ${t.verb2 ? toGerund(t.verb2) : '...'} in order to ${t.purpose || '...'}.`);
                     }
                     if (data.paragraphs) setParagraphs(data.paragraphs);
                 }
@@ -48,23 +57,27 @@ export const EssayPage: React.FC = () => {
         } catch (e) { console.error(e); alert("Error submitting"); }
     };
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-[#f8f9fa]"><Loader2 className="animate-spin text-primary" /></div>;
+    if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa' }}><Loader2 className="animate-spin" size={32} color="var(--color-primary)" /></div>;
 
     return (
-        <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans">
-            <header className="bg-white border-b border-border px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="btn btn-ghost p-2 text-muted"><ArrowLeft size={20} /></button>
+        <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
+            <header style={{ backgroundColor: 'white', borderBottom: '1px solid var(--color-border)', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10, boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ padding: '0.5rem', color: 'var(--color-text-muted)' }}>
+                        <ArrowLeft size={20} />
+                    </button>
                     <div>
-                        <h1 className="text-xl font-bold font-serif text-primary flex items-center gap-2">
+                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <FileText size={20} /> Final Assembly
                         </h1>
-                        <p className="text-xs text-muted uppercase tracking-wider">Drafting for: <span className="text-primary font-semibold">{assignmentTitle}</span></p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                            Drafting for: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{assignmentTitle}</span>
+                        </p>
                     </div>
                 </div>
             </header>
 
-            <main className="flex-1 p-8">
+            <main style={{ flex: 1, padding: '2rem' }}>
                 <EssayAssembler
                     thesis={thesis}
                     paragraphs={paragraphs}
