@@ -260,21 +260,51 @@ export const TextReader: React.FC = () => {
         }
     };
 
-    const handleParagraphComplete = (paragraph: any) => {
-        setParagraphs([...paragraphs, paragraph]);
+    const handleParagraphComplete = async (paragraph: any) => {
+        const newParagraphs = [...paragraphs, paragraph];
+        setParagraphs(newParagraphs);
         setShowParagraphBuilder(false);
+
+        if (user && id) {
+            try {
+                const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
+                await setDoc(submissionRef, {
+                    paragraphs: newParagraphs,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+            } catch (e) { console.error("Error saving paragraph", e); }
+        }
+        alert('Paragraph added to essay!');
     };
 
+    const handleEssaySubmit = async () => {
+        if (!user || !id) return;
+        try {
+            const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
+            await setDoc(submissionRef, {
+                status: 'submitted',
+                submittedAt: serverTimestamp()
+            }, { merge: true });
+            alert("Essay submitted successfully!");
+            navigate('/student/dashboard');
+        } catch (e) {
+            console.error("Error submitting essay", e);
+            alert("Failed to submit essay.");
+        }
+    };
 
-
-    if (loading) return <div className="flex items-center justify-center h-screen"><Loader2 size={32} className="animate-spin text-primary" /></div>;
-    if (showEssayAssembler) return <EssayAssembler thesis={thesis} paragraphs={paragraphs} onBack={() => setShowEssayAssembler(false)} />;
-    if (showParagraphBuilder) return <ParagraphBuilder annotations={annotations} onBack={() => setShowParagraphBuilder(false)} onComplete={handleParagraphComplete} />;
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <Loader2 className="animate-spin text-primary" size={32} />
+            </div>
+        );
+    }
 
     return (
-        <div className="flex gap-md" style={{ height: 'calc(100vh - 8rem)', overflow: 'hidden', position: 'relative' }}>
+        <div className="flex h-screen bg-surface overflow-hidden">
             {showSpacecatReview && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center p-6 border-b border-border bg-background">
                             <div className="flex items-center gap-3">
@@ -315,6 +345,27 @@ export const TextReader: React.FC = () => {
                             <button onClick={() => setShowSpacecatReview(false)} className="btn btn-primary">Close</button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {showParagraphBuilder && (
+                <div className="fixed inset-0 z-50 bg-background">
+                    <ParagraphBuilder
+                        annotations={annotations}
+                        onComplete={handleParagraphComplete}
+                        onBack={() => setShowParagraphBuilder(false)}
+                    />
+                </div>
+            )}
+
+            {showEssayAssembler && (
+                <div className="fixed inset-0 z-50 bg-background">
+                    <EssayAssembler
+                        thesis={thesis}
+                        paragraphs={paragraphs}
+                        onBack={() => setShowEssayAssembler(false)}
+                        onSubmit={handleEssaySubmit}
+                    />
                 </div>
             )}
 
@@ -471,6 +522,6 @@ export const TextReader: React.FC = () => {
                     </>
                 )}
             </div>
-        </div>
+        </div >
     );
 };

@@ -1,14 +1,15 @@
 import React from 'react';
-import { ArrowLeft, Download, Copy } from 'lucide-react';
+import { ArrowLeft, Copy, Send } from 'lucide-react';
 import type { ParagraphState } from './ParagraphBuilder';
 
 interface EssayAssemblerProps {
     thesis: string;
     paragraphs: ParagraphState[];
     onBack: () => void;
+    onSubmit: () => void;
 }
 
-export const EssayAssembler: React.FC<EssayAssemblerProps> = ({ thesis, paragraphs, onBack }) => {
+export const EssayAssembler: React.FC<EssayAssemblerProps> = ({ thesis, paragraphs, onBack, onSubmit }) => {
 
     const handleCopy = () => {
         const text = `Thesis: ${thesis}\n\n` + paragraphs.map(p =>
@@ -17,24 +18,6 @@ export const EssayAssembler: React.FC<EssayAssemblerProps> = ({ thesis, paragrap
 
         navigator.clipboard.writeText(text);
         alert('Essay skeleton copied to clipboard!');
-    };
-
-    const handleSubmit = () => {
-        // Create a submission object
-        const submission = {
-            id: Date.now().toString(),
-            studentName: "Current Student", // In a real app, this would come from auth
-            thesis: thesis,
-            paragraphs: paragraphs,
-            submittedAt: new Date().toLocaleString()
-        };
-
-        // Save to localStorage to simulate a database
-        const existingSubmissions = JSON.parse(localStorage.getItem('essay_submissions') || '[]');
-        localStorage.setItem('essay_submissions', JSON.stringify([...existingSubmissions, submission]));
-
-        alert('Essay submitted to teacher!');
-        if (onBack) onBack();
     };
 
     return (
@@ -49,8 +32,8 @@ export const EssayAssembler: React.FC<EssayAssemblerProps> = ({ thesis, paragrap
                         <Copy size={18} className="mr-sm" />
                         Copy to Clipboard
                     </button>
-                    <button onClick={handleSubmit} className="btn btn-primary">
-                        <Download size={18} className="mr-sm" />
+                    <button onClick={onSubmit} className="btn btn-primary bg-success hover:bg-green-700 border-success">
+                        <Send size={18} className="mr-sm" />
                         Submit Essay
                     </button>
                 </div>
