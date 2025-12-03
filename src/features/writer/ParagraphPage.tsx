@@ -4,7 +4,7 @@ import { doc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp
 import { db } from '../../lib/firebase';
 import { ArrowLeft, Layout, Sparkles, Loader2, CheckCircle2, Edit2, Eye } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { ParagraphBuilder, type ParagraphState } from './ParagraphBuilder';
+import { ParagraphBuilder, ParagraphState } from './ParagraphBuilder';
 
 export const ParagraphPage: React.FC = () => {
     const { id, studentId } = useParams<{ id: string; studentId?: string }>();
@@ -71,8 +71,6 @@ export const ParagraphPage: React.FC = () => {
     };
 
     // Filter logic: Show all annotations EXCEPT those used in OTHER paragraphs
-    // If I am editing Paragraph A, I want to see Paragraph A's annotation available (so it shows in the builder)
-    // OR, simpler: The builder handles the "Selected" state. We just need to hide used ones from the BANK.
     const usedAnnotationIds = existingParagraphs
         .filter(p => p.id !== editingParagraphId) // Don't count the current one as "used" so we can see it if we drop it back
         .map(p => p.claimVerb?.id);
@@ -113,6 +111,7 @@ export const ParagraphPage: React.FC = () => {
                     {!isReadOnly && (
                         <div style={{ height: '800px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
                             <ParagraphBuilder
+                                key={editingParagraphId || 'new'} // <--- NUCLEAR RESET: Forces re-mount when mode changes
                                 annotations={availableAnnotations}
                                 onBack={() => navigate(-1)}
                                 onComplete={handleSave}
