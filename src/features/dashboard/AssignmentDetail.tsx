@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ArrowLeft, Calendar, Clock, CheckCircle, AlertCircle, FileText, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle, AlertCircle, FileText, Eye, Loader2 } from 'lucide-react';
 import type { Assignment } from '../../types/class';
 
 interface StudentProgress {
