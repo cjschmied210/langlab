@@ -20,8 +20,9 @@ interface ParagraphBuilderProps {
     annotations: Annotation[];
     onBack: () => void;
     onComplete: (paragraph: ParagraphState) => void;
-    onCancel?: () => void; // New prop for cancelling edit
-    initialState?: ParagraphState | null; // New prop for editing
+    onCancel?: () => void;
+    initialState?: ParagraphState | null; // <--- This is the prop that changes
+    textData?: any;
 }
 
 export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
@@ -31,19 +32,23 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
     onCancel,
     initialState
 }) => {
-    const [paragraph, setParagraph] = useState<ParagraphState>({
+    // Default empty state
+    const emptyState: ParagraphState = {
         id: `p-${Date.now()}`,
         claimVerb: null,
         evidence: '',
         commentary: ''
-    });
+    };
 
-    // Load initial state when editing
+    const [paragraph, setParagraph] = useState<ParagraphState>(emptyState);
+
+    // --- THE FIX: Listen for prop changes ---
     useEffect(() => {
         if (initialState) {
+            // If parent passes an existing paragraph, load it!
             setParagraph(initialState);
         } else {
-            // Reset if switching back to create mode
+            // If parent clears it (Cancel Edit), reset to empty!
             setParagraph({
                 id: `p-${Date.now()}`,
                 claimVerb: null,
@@ -52,19 +57,25 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
             });
         }
     }, [initialState]);
+    // ^^^ This dependency array ensures it runs every time you click a different card
 
     const [commentarySentences, setCommentarySentences] = useState(0);
     const [evidenceSentences, setEvidenceSentences] = useState(0);
 
-    // Recalculate counts when paragraph changes (e.g. on load)
+    // Recalculate stats whenever the content changes (either by typing OR by loading a saved paragraph)
     useEffect(() => {
         if (paragraph.evidence) {
             setEvidenceSentences(paragraph.evidence.split(/[.!?]+/).filter(Boolean).length || 1);
+        } else {
+            setEvidenceSentences(0);
         }
+
         if (paragraph.commentary) {
             setCommentarySentences(paragraph.commentary.split(/[.!?]+/).filter(s => s.trim().length > 0).length);
+        } else {
+            setCommentarySentences(0);
         }
-    }, [paragraph.evidence, paragraph.commentary]);
+    }, [paragraph]);
 
     const handleDragEnd = (result: DropResult) => {
         if (!result.destination) return;
@@ -87,10 +98,10 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
     };
 
     const isRatioMet = commentarySentences >= (evidenceSentences * 2);
-    const isEditing = !!initialState;
+    const isEditing = !!initialState; // Helper flag
 
     return (
-        <div style={{ display: 'flex', height: '100vh', backgroundColor: 'white', overflow: 'hidden' }}>
+        <div className="flex h-screen bg-white overflow-hidden">
             <DragDropContext onDragEnd={handleDragEnd}>
 
                 {/* Left Sidebar: Evidence Bank */}
@@ -104,8 +115,8 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', backgroundColor: 'var(--color-background)' }}>
                         {annotations.length === 0 ? (
-                            <div className="text-center text-muted text-sm p-4 border-2 border-dashed rounded-lg">
-                                All evidence used!<br />Great job.
+                            <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem', fontSize: '0.9rem' }}>
+                                {isEditing ? "Editing Paragraph..." : "All evidence used! Select a paragraph below to edit."}
                             </div>
                         ) : (
                             <Droppable droppableId="annotations-list" isDropDisabled={true}>
@@ -116,7 +127,9 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
                                         style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
                                     >
                                         {annotations.map((ann, index) => {
+                                            // Highlight the one currently being used if we are editing
                                             const isUsed = paragraph.claimVerb?.id === ann.id;
+
                                             return (
                                                 <Draggable key={ann.id} draggableId={ann.id} index={index} isDragDisabled={isUsed}>
                                                     {(provided, snapshot) => (
@@ -128,9 +141,10 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
                                                             style={{
                                                                 padding: '1rem',
                                                                 borderLeft: '4px solid var(--color-accent)',
-                                                                backgroundColor: snapshot.isDragging ? 'var(--color-surface)' : 'white',
-                                                                opacity: isUsed ? 0.5 : 1,
-                                                                cursor: isUsed ? 'not-allowed' : 'grab',
+                                                                backgroundColor: snapshot.isDragging ? 'var(--color-surface)' : (isUsed ? '#f0f9ff' : 'white'), // Light blue background if selected
+                                                                borderColor: isUsed ? 'var(--color-primary)' : 'var(--color-border)',
+                                                                opacity: isUsed ? 1 : 1, // Keep it fully visible even if used, just distinct
+                                                                cursor: isUsed ? 'default' : 'grab',
                                                                 boxShadow: snapshot.isDragging ? 'var(--shadow-lg)' : 'var(--shadow-sm)',
                                                                 ...provided.draggableProps.style
                                                             }}
@@ -147,7 +161,7 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
                                                                 }}>
                                                                     {ann.verb}
                                                                 </span>
-                                                                {isUsed && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Selected</span>}
+                                                                {isUsed && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase' }}>Active</span>}
                                                             </div>
 
                                                             <div style={{
@@ -183,6 +197,8 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
                             </h1>
                             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>Focus on Reasoning & Organization</p>
                         </div>
+
+                        {/* Cancel Button for Edit Mode */}
                         {isEditing && onCancel && (
                             <button
                                 onClick={onCancel}
@@ -244,61 +260,71 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
                                 </Droppable>
                             </div>
 
-                            {/* Step 2 & 3 (Evidence & Commentary) */}
+                            {/* Step 2: Evidence */}
                             {paragraph.claimVerb && (
-                                <>
-                                    <div className="card" style={{ padding: '2rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>2</div>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Evidence</h3>
-                                        </div>
-                                        <div style={{ backgroundColor: '#f9fafb', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontStyle: 'italic', fontFamily: 'var(--font-serif)', fontSize: '1.1rem', lineHeight: 1.6, color: 'var(--color-text)' }}>
-                                            <Quote size={24} style={{ color: 'var(--color-accent)', marginBottom: '0.5rem', opacity: 0.5 }} />
-                                            "{paragraph.evidence}"
-                                        </div>
+                                <div className="card" style={{ padding: '2rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>2</div>
+                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Evidence</h3>
                                     </div>
-
-                                    <div className="card" style={{ padding: '2rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>3</div>
-                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Commentary</h3>
-                                            </div>
-                                            <div style={{
-                                                display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
-                                                padding: '0.25rem 0.75rem', borderRadius: '999px',
-                                                backgroundColor: isRatioMet ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                                color: isRatioMet ? 'var(--color-success)' : '#b45309'
-                                            }}>
-                                                {isRatioMet ? <Check size={16} /> : <AlertCircle size={16} />}
-                                                Ratio: {commentarySentences} / {evidenceSentences * 2} Sentences
-                                            </div>
-                                        </div>
-
-                                        <textarea
-                                            value={paragraph.commentary}
-                                            onChange={handleCommentaryChange}
-                                            placeholder="Explain HOW the evidence supports your claim and WHY it matters to the audience..."
-                                            style={{
-                                                width: '100%', minHeight: '200px', padding: '1.5rem', borderRadius: 'var(--radius-md)',
-                                                border: `1px solid ${isRatioMet ? 'var(--color-success)' : 'var(--color-border)'}`,
-                                                fontSize: '1.1rem', lineHeight: 1.6, fontFamily: 'var(--font-sans)', outline: 'none', resize: 'vertical'
-                                            }}
-                                        />
-
-                                        <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-                                            <button
-                                                className="btn btn-primary"
-                                                style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
-                                                disabled={!isRatioMet}
-                                                onClick={() => onComplete(paragraph)}
-                                            >
-                                                {isEditing ? 'Update Paragraph' : 'Add Paragraph to Essay'}
-                                            </button>
-                                        </div>
+                                    <div style={{ backgroundColor: '#f9fafb', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontStyle: 'italic', fontFamily: 'var(--font-serif)', fontSize: '1.1rem', lineHeight: 1.6, color: 'var(--color-text)' }}>
+                                        <Quote size={24} style={{ color: 'var(--color-accent)', marginBottom: '0.5rem', opacity: 0.5 }} />
+                                        "{paragraph.evidence}"
                                     </div>
-                                </>
+                                </div>
                             )}
+
+                            {/* Step 3: Commentary */}
+                            {paragraph.claimVerb && (
+                                <div className="card" style={{ padding: '2rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>3</div>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Commentary</h3>
+                                        </div>
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+                                            padding: '0.25rem 0.75rem', borderRadius: '99px',
+                                            backgroundColor: isRatioMet ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                            color: isRatioMet ? 'var(--color-success)' : '#b45309'
+                                        }}>
+                                            {isRatioMet ? <Check size={16} /> : <AlertCircle size={16} />}
+                                            Ratio: {commentarySentences} / {evidenceSentences * 2} Sentences
+                                        </div>
+                                    </div>
+
+                                    <textarea
+                                        value={paragraph.commentary}
+                                        onChange={handleCommentaryChange}
+                                        placeholder="Explain HOW the evidence supports your claim and WHY it matters to the audience..."
+                                        style={{
+                                            width: '100%',
+                                            minHeight: '200px',
+                                            padding: '1.5rem',
+                                            borderRadius: 'var(--radius-md)',
+                                            border: `1px solid ${isRatioMet ? 'var(--color-success)' : 'var(--color-border)'}`,
+                                            fontSize: '1.1rem',
+                                            lineHeight: 1.6,
+                                            fontFamily: 'var(--font-sans)',
+                                            resize: 'vertical',
+                                            outline: 'none',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+
+                                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
+                                            disabled={!isRatioMet}
+                                            onClick={() => onComplete(paragraph)}
+                                        >
+                                            {isEditing ? 'Update Paragraph' : 'Add Paragraph to Essay'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     </div>
                 </div>
