@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Loader2, FileText, Calendar, ChevronRight, Eye, Users, TrendingUp } from 'lucide-react';
+import { Plus, BookOpen, Loader2, FileText, Calendar, ChevronRight, Eye, Users } from 'lucide-react';
 import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore'; // <--- Added doc, getDoc
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -202,8 +202,8 @@ export const TeacherDashboard: React.FC = () => {
                             key={cls.id}
                             onClick={() => setActiveClass(cls)}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeClass?.id === cls.id
-                                    ? 'bg-primary text-white shadow-md'
-                                    : 'bg-white border border-border text-muted hover:border-primary hover:text-primary'
+                                ? 'bg-primary text-white shadow-md'
+                                : 'bg-white border border-border text-muted hover:border-primary hover:text-primary'
                                 }`}
                         >
                             {cls.name}
