@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Loader2, Calendar, ChevronRight, Clock, BookOpen, Sparkles, Play, CheckCircle2, Circle } from 'lucide-react';
+import { Loader2, Calendar, ChevronRight, Clock, BookOpen, Sparkles, Play, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Class, Assignment } from '../../types/class';
 
