@@ -1,7 +1,7 @@
 import React from 'react';
-import { ArrowLeft, Copy, Send, FileText, CheckCircle2, GripVertical } from 'lucide-react';
+import { ArrowLeft, Copy, Send, FileText, GripVertical } from 'lucide-react';
 import type { ParagraphState } from './ParagraphBuilder';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 
 interface EssayAssemblerProps {
     thesis: string;

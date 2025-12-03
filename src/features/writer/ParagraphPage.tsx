@@ -4,7 +4,7 @@ import { doc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp
 import { db } from '../../lib/firebase';
 import { ArrowLeft, Layout, Sparkles, Loader2, CheckCircle2, Edit2, Eye } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { ParagraphBuilder, ParagraphState } from './ParagraphBuilder';
+import { ParagraphBuilder, type ParagraphState } from './ParagraphBuilder';
 
 export const ParagraphPage: React.FC = () => {
     const { id, studentId } = useParams<{ id: string; studentId?: string }>();
