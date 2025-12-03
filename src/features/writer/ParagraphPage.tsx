@@ -70,10 +70,13 @@ export const ParagraphPage: React.FC = () => {
         } catch (e) { console.error(e); }
     };
 
-    // Filter logic: Show all annotations EXCEPT those used in OTHER paragraphs
+    // FILTER LOGIC:
+    // Identify ALL annotation IDs currently used in saved paragraphs
+    // BUT exclude the one used in the paragraph we are currently editing (so we can see it to re-drag it if needed)
     const usedAnnotationIds = existingParagraphs
-        .filter(p => p.id !== editingParagraphId) // Don't count the current one as "used" so we can see it if we drop it back
-        .map(p => p.claimVerb?.id);
+        .filter(p => p.id !== editingParagraphId)
+        .map(p => p.claimVerb?.id)
+        .filter(Boolean); // Remove nulls
 
     const availableAnnotations = annotations.filter(a => !usedAnnotationIds.includes(a.id));
 
@@ -144,8 +147,10 @@ export const ParagraphPage: React.FC = () => {
                                             {!isReadOnly && <Edit2 size={14} color="var(--color-text-muted)" />}
                                         </div>
                                         <div style={{ marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>{p.claimVerb?.verb}</div>
+
+                                        {/* COMMENTARY PREVIEW (Fixed) */}
                                         <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                            {p.commentary}
+                                            {p.commentary || <span style={{ fontStyle: 'italic', color: 'var(--color-text-muted)' }}>No commentary added.</span>}
                                         </div>
                                     </div>
                                 ))}
