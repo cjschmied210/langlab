@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ArrowLeft, Layout, Sparkles, Loader2, CheckCircle2, Eye } from 'lucide-react';
+import { ArrowLeft, Layout, Sparkles, Loader2, CheckCircle2, Edit2, Eye } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { ParagraphBuilder } from './ParagraphBuilder';
+import { ParagraphBuilder, ParagraphState } from './ParagraphBuilder';
 
 export const ParagraphPage: React.FC = () => {
     const { id, studentId } = useParams<{ id: string; studentId?: string }>();
@@ -18,22 +18,22 @@ export const ParagraphPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [assignmentTitle, setAssignmentTitle] = useState('');
     const [annotations, setAnnotations] = useState<any[]>([]);
-    const [existingParagraphs, setExistingParagraphs] = useState<any[]>([]);
+    const [existingParagraphs, setExistingParagraphs] = useState<ParagraphState[]>([]);
+
+    // New State for Editing
+    const [editingParagraphId, setEditingParagraphId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
             if (!id || !targetUserId) return;
             try {
-                // 1. Get Assignment Title
                 const assignSnap = await getDoc(doc(db, 'assignments', id));
                 if (assignSnap.exists()) setAssignmentTitle(assignSnap.data().title);
 
-                // 2. Get Annotations (Evidence Bank)
                 const q = query(collection(db, 'annotations'), where('assignmentId', '==', id), where('userId', '==', targetUserId));
                 const annSnap = await getDocs(q);
                 setAnnotations(annSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-                // 3. Get Existing Progress
                 const subRef = doc(db, 'submissions', `${targetUserId}_${id}`);
                 const subSnap = await getDoc(subRef);
                 if (subSnap.exists() && subSnap.data().paragraphs) {
@@ -46,9 +46,19 @@ export const ParagraphPage: React.FC = () => {
         fetchData();
     }, [id, targetUserId]);
 
-    const handleSave = async (paragraph: any) => {
-        if (!user || !id) return;
-        const newParagraphs = [...existingParagraphs, paragraph];
+    const handleSave = async (paragraph: ParagraphState) => {
+        if (!user || !id || isReadOnly) return;
+
+        let newParagraphs;
+        if (editingParagraphId) {
+            // Update existing
+            newParagraphs = existingParagraphs.map(p => p.id === paragraph.id ? paragraph : p);
+            setEditingParagraphId(null); // Exit edit mode
+        } else {
+            // Add new
+            newParagraphs = [...existingParagraphs, paragraph];
+        }
+
         setExistingParagraphs(newParagraphs);
 
         try {
@@ -57,22 +67,30 @@ export const ParagraphPage: React.FC = () => {
                 paragraphs: newParagraphs,
                 updatedAt: serverTimestamp()
             }, { merge: true });
-            alert("Paragraph Saved!");
         } catch (e) { console.error(e); }
     };
 
-    if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa' }}><Loader2 className="animate-spin" size={32} color="var(--color-primary)" /></div>;
+    // Filter logic: Show all annotations EXCEPT those used in OTHER paragraphs
+    // If I am editing Paragraph A, I want to see Paragraph A's annotation available (so it shows in the builder)
+    // OR, simpler: The builder handles the "Selected" state. We just need to hide used ones from the BANK.
+    const usedAnnotationIds = existingParagraphs
+        .filter(p => p.id !== editingParagraphId) // Don't count the current one as "used" so we can see it if we drop it back
+        .map(p => p.claimVerb?.id);
+
+    const availableAnnotations = annotations.filter(a => !usedAnnotationIds.includes(a.id));
+
+    const paragraphToEdit = existingParagraphs.find(p => p.id === editingParagraphId) || null;
+
+    if (loading) return <div className="h-screen flex items-center justify-center bg-[#f8f9fa]"><Loader2 className="animate-spin text-primary" /></div>;
 
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
-            {/* Clean Header */}
-            <header style={{ backgroundColor: 'white', borderBottom: '1px solid var(--color-border)', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', backgroundColor: '#f8f9fa' }}>
+            {/* Header */}
+            <header style={{ backgroundColor: 'white', borderBottom: '1px solid var(--color-border)', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ padding: '0.5rem', color: 'var(--color-text-muted)' }}>
-                        <ArrowLeft size={20} />
-                    </button>
+                    <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ padding: '0.5rem', color: 'var(--color-text-muted)' }}><ArrowLeft size={20} /></button>
                     <div>
-                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                             <Layout size={20} /> Paragraph Builder
                         </h1>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
@@ -88,36 +106,54 @@ export const ParagraphPage: React.FC = () => {
             </header>
 
             {/* Main Workspace */}
-            <main style={{ flex: 1, maxWidth: '1280px', margin: '0 auto', padding: '2rem', width: '100%' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+            <main style={{ flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '2rem', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ display: 'grid', gap: '2rem' }}>
+
+                    {/* THE BUILDER - Hide if ReadOnly */}
                     {!isReadOnly && (
-                        <ParagraphBuilder
-                            annotations={annotations}
-                            onBack={() => navigate(-1)}
-                            onComplete={handleSave}
-                        />
+                        <div style={{ height: '800px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
+                            <ParagraphBuilder
+                                annotations={availableAnnotations}
+                                onBack={() => navigate(-1)}
+                                onComplete={handleSave}
+                                initialState={paragraphToEdit}
+                                onCancel={() => setEditingParagraphId(null)}
+                            />
+                        </div>
+                    )}
+
+                    {/* Completed Paragraphs Preview */}
+                    {(existingParagraphs.length > 0 || isReadOnly) && (
+                        <div style={{ marginTop: isReadOnly ? '0' : '2rem', paddingTop: isReadOnly ? '0' : '2rem', borderTop: isReadOnly ? 'none' : '2px dashed var(--color-border)' }}>
+                            <h3 style={{ color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <CheckCircle2 size={16} /> Completed Paragraphs ({existingParagraphs.length})
+                            </h3>
+                            <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+                                {existingParagraphs.map((p, i) => (
+                                    <div
+                                        key={p.id}
+                                        onClick={() => !isReadOnly && setEditingParagraphId(p.id)}
+                                        style={{
+                                            padding: '1.5rem', backgroundColor: 'white', borderRadius: 'var(--radius-md)',
+                                            border: editingParagraphId === p.id ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                                            boxShadow: 'var(--shadow-sm)', cursor: isReadOnly ? 'default' : 'pointer', transition: 'all 0.2s'
+                                        }}
+                                        className={!isReadOnly ? "hover-card" : ""}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase' }}>Paragraph {i + 1}</div>
+                                            {!isReadOnly && <Edit2 size={14} color="var(--color-text-muted)" />}
+                                        </div>
+                                        <div style={{ marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>{p.claimVerb?.verb}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {p.commentary}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     )}
                 </div>
-
-                {/* Show Saved Paragraphs Preview */}
-                {(existingParagraphs.length > 0 || isReadOnly) && (
-                    <div style={{ marginTop: isReadOnly ? '0' : '3rem', paddingTop: isReadOnly ? '0' : '2rem', borderTop: isReadOnly ? 'none' : '2px dashed var(--color-border)' }}>
-                        <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <CheckCircle2 size={16} /> Completed Paragraphs ({existingParagraphs.length})
-                        </h3>
-                        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-                            {existingParagraphs.map((p, i) => (
-                                <div key={i} style={{ padding: '1rem', backgroundColor: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Paragraph {i + 1}</div>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <p style={{ margin: 0 }}><strong>Claim:</strong> {p.claimVerb?.verb}</p>
-                                        <p style={{ margin: 0, fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>"{p.evidence}"</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </main>
         </div>
     );

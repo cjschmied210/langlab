@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Check, AlertCircle, Quote } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle, Quote, X } from 'lucide-react';
 
 interface Annotation {
     id: string;
@@ -20,19 +20,51 @@ interface ParagraphBuilderProps {
     annotations: Annotation[];
     onBack: () => void;
     onComplete: (paragraph: ParagraphState) => void;
-    textData?: any;
+    onCancel?: () => void; // New prop for cancelling edit
+    initialState?: ParagraphState | null; // New prop for editing
 }
 
-export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations, onBack, onComplete }) => {
+export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({
+    annotations,
+    onBack,
+    onComplete,
+    onCancel,
+    initialState
+}) => {
     const [paragraph, setParagraph] = useState<ParagraphState>({
-        id: 'p1',
+        id: `p-${Date.now()}`,
         claimVerb: null,
         evidence: '',
         commentary: ''
     });
 
+    // Load initial state when editing
+    useEffect(() => {
+        if (initialState) {
+            setParagraph(initialState);
+        } else {
+            // Reset if switching back to create mode
+            setParagraph({
+                id: `p-${Date.now()}`,
+                claimVerb: null,
+                evidence: '',
+                commentary: ''
+            });
+        }
+    }, [initialState]);
+
     const [commentarySentences, setCommentarySentences] = useState(0);
     const [evidenceSentences, setEvidenceSentences] = useState(0);
+
+    // Recalculate counts when paragraph changes (e.g. on load)
+    useEffect(() => {
+        if (paragraph.evidence) {
+            setEvidenceSentences(paragraph.evidence.split(/[.!?]+/).filter(Boolean).length || 1);
+        }
+        if (paragraph.commentary) {
+            setCommentarySentences(paragraph.commentary.split(/[.!?]+/).filter(s => s.trim().length > 0).length);
+        }
+    }, [paragraph.evidence, paragraph.commentary]);
 
     const handleDragEnd = (result: DropResult) => {
         if (!result.destination) return;
@@ -46,24 +78,19 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                 claimVerb: annotation,
                 evidence: annotation.text
             }));
-            // Rough estimate: 1 sentence per ~20 words or split by periods
-            setEvidenceSentences(annotation.text.split(/[.!?]+/).filter(Boolean).length || 1);
         }
     };
 
     const handleCommentaryChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const text = e.target.value;
         setParagraph(prev => ({ ...prev, commentary: text }));
-
-        // Calculate sentence count
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-        setCommentarySentences(sentences);
     };
 
     const isRatioMet = commentarySentences >= (evidenceSentences * 2);
+    const isEditing = !!initialState;
 
     return (
-        <div className="flex h-screen bg-white overflow-hidden">
+        <div style={{ display: 'flex', height: '100vh', backgroundColor: 'white', overflow: 'hidden' }}>
             <DragDropContext onDragEnd={handleDragEnd}>
 
                 {/* Left Sidebar: Evidence Bank */}
@@ -76,104 +103,101 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', backgroundColor: 'var(--color-background)' }}>
-                        <Droppable droppableId="annotations-list" isDropDisabled={true}>
-                            {(provided) => (
-                                <div
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-                                >
-                                    {annotations.map((ann, index) => {
-                                        const isUsed = paragraph.claimVerb?.id === ann.id;
-                                        return (
-                                            <Draggable key={ann.id} draggableId={ann.id} index={index} isDragDisabled={isUsed}>
-                                                {(provided, snapshot) => (
-                                                    <div
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
-                                                        {...provided.dragHandleProps}
-                                                        className="card"
-                                                        style={{
-                                                            padding: '1rem',
-                                                            borderLeft: '4px solid var(--color-accent)',
-                                                            backgroundColor: snapshot.isDragging ? 'var(--color-surface)' : 'white',
-                                                            opacity: isUsed ? 0.5 : 1,
-                                                            cursor: isUsed ? 'not-allowed' : 'grab',
-                                                            boxShadow: snapshot.isDragging ? 'var(--shadow-lg)' : 'var(--shadow-sm)',
-                                                            ...provided.draggableProps.style
-                                                        }}
-                                                    >
-                                                        <div className="flex justify-between items-start mb-sm">
-                                                            <span style={{
-                                                                backgroundColor: 'var(--color-primary)',
-                                                                color: 'white',
-                                                                fontSize: '0.7rem',
-                                                                padding: '2px 6px',
-                                                                borderRadius: '4px',
-                                                                fontWeight: 600,
-                                                                textTransform: 'uppercase'
-                                                            }}>
-                                                                {ann.verb}
-                                                            </span>
-                                                            {isUsed && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Selected</span>}
-                                                        </div>
-
-                                                        <div style={{
-                                                            fontSize: '0.9rem',
-                                                            fontStyle: 'italic',
-                                                            color: 'var(--color-text-muted)',
-                                                            borderLeft: '2px solid var(--color-border)',
-                                                            paddingLeft: '0.5rem',
-                                                            marginBottom: '0.5rem',
-                                                            lineHeight: 1.5
-                                                        }}>
-                                                            "{ann.text}"
-                                                        </div>
-
-                                                        {ann.commentary && (
-                                                            <div style={{
-                                                                fontSize: '0.85rem',
-                                                                color: 'var(--color-text)',
-                                                                backgroundColor: 'var(--color-background)',
-                                                                padding: '0.5rem',
-                                                                borderRadius: '4px'
-                                                            }}>
+                        {annotations.length === 0 ? (
+                            <div className="text-center text-muted text-sm p-4 border-2 border-dashed rounded-lg">
+                                All evidence used!<br />Great job.
+                            </div>
+                        ) : (
+                            <Droppable droppableId="annotations-list" isDropDisabled={true}>
+                                {(provided) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                        style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+                                    >
+                                        {annotations.map((ann, index) => {
+                                            const isUsed = paragraph.claimVerb?.id === ann.id;
+                                            return (
+                                                <Draggable key={ann.id} draggableId={ann.id} index={index} isDragDisabled={isUsed}>
+                                                    {(provided, snapshot) => (
+                                                        <div
+                                                            ref={provided.innerRef}
+                                                            {...provided.draggableProps}
+                                                            {...provided.dragHandleProps}
+                                                            className="card"
+                                                            style={{
+                                                                padding: '1rem',
+                                                                borderLeft: '4px solid var(--color-accent)',
+                                                                backgroundColor: snapshot.isDragging ? 'var(--color-surface)' : 'white',
+                                                                opacity: isUsed ? 0.5 : 1,
+                                                                cursor: isUsed ? 'not-allowed' : 'grab',
+                                                                boxShadow: snapshot.isDragging ? 'var(--shadow-lg)' : 'var(--shadow-sm)',
+                                                                ...provided.draggableProps.style
+                                                            }}
+                                                        >
+                                                            <div className="flex justify-between items-start mb-sm">
                                                                 <span style={{
+                                                                    backgroundColor: 'var(--color-primary)',
+                                                                    color: 'white',
+                                                                    fontSize: '0.7rem',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '4px',
                                                                     fontWeight: 600,
-                                                                    fontSize: '0.75rem',
-                                                                    textTransform: 'uppercase',
-                                                                    color: 'var(--color-text-muted)',
-                                                                    display: 'block',
-                                                                    marginBottom: '0.25rem'
+                                                                    textTransform: 'uppercase'
                                                                 }}>
-                                                                    Effect:
+                                                                    {ann.verb}
                                                                 </span>
-                                                                {ann.commentary}
+                                                                {isUsed && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Selected</span>}
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </Draggable>
-                                        );
-                                    })}
-                                    {provided.placeholder}
-                                </div>
-                            )}
-                        </Droppable>
+
+                                                            <div style={{
+                                                                fontSize: '0.9rem',
+                                                                fontStyle: 'italic',
+                                                                color: 'var(--color-text-muted)',
+                                                                borderLeft: '2px solid var(--color-border)',
+                                                                paddingLeft: '0.5rem',
+                                                                marginBottom: '0.5rem',
+                                                                lineHeight: 1.5
+                                                            }}>
+                                                                "{ann.text}"
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </Draggable>
+                                            );
+                                        })}
+                                        {provided.placeholder}
+                                    </div>
+                                )}
+                            </Droppable>
+                        )}
                     </div>
                 </div>
 
                 {/* Main Stage: Builder */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fa', overflow: 'hidden', position: 'relative' }}>
-                    <header style={{ padding: '1rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'white', textAlign: 'center' }}>
-                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>Paragraph Architect</h1>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>Focus on Reasoning & Organization</p>
+                    <header style={{ padding: '1rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'white', textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                        <div>
+                            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+                                {isEditing ? 'Edit Paragraph' : 'Paragraph Architect'}
+                            </h1>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>Focus on Reasoning & Organization</p>
+                        </div>
+                        {isEditing && onCancel && (
+                            <button
+                                onClick={onCancel}
+                                className="btn btn-ghost"
+                                style={{ position: 'absolute', right: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}
+                            >
+                                <X size={16} /> Cancel Edit
+                            </button>
+                        )}
                     </header>
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
                         <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '8rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-                            {/* Step 1: Claim (The Hero) */}
+                            {/* Step 1: Claim */}
                             <div className="card" style={{ padding: '2rem', borderTop: '4px solid var(--color-primary)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.2rem' }}>1</div>
@@ -211,7 +235,6 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                                                 </div>
                                             ) : (
                                                 <div style={{ textAlign: 'center', pointerEvents: 'none', opacity: 0.5 }}>
-                                                    <ArrowLeft size={48} style={{ margin: '0 auto 1rem', transform: 'rotate(180deg)', color: 'var(--color-text-muted)' }} />
                                                     <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>Drop Evidence Card Here</span>
                                                 </div>
                                             )}
@@ -221,71 +244,61 @@ export const ParagraphBuilder: React.FC<ParagraphBuilderProps> = ({ annotations,
                                 </Droppable>
                             </div>
 
-                            {/* Step 2: Evidence */}
+                            {/* Step 2 & 3 (Evidence & Commentary) */}
                             {paragraph.claimVerb && (
-                                <div className="card" style={{ padding: '2rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>2</div>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Evidence</h3>
-                                    </div>
-                                    <div style={{ backgroundColor: '#f9fafb', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontStyle: 'italic', fontFamily: 'var(--font-serif)', fontSize: '1.1rem', lineHeight: 1.6, color: 'var(--color-text)' }}>
-                                        <Quote size={24} style={{ color: 'var(--color-accent)', marginBottom: '0.5rem', opacity: 0.5 }} />
-                                        "{paragraph.evidence}"
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Step 3: Commentary */}
-                            {paragraph.claimVerb && (
-                                <div className="card" style={{ padding: '2rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>3</div>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Commentary</h3>
+                                <>
+                                    <div className="card" style={{ padding: '2rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>2</div>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Evidence</h3>
                                         </div>
-                                        <div style={{
-                                            display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
-                                            padding: '0.25rem 0.75rem', borderRadius: '999px',
-                                            backgroundColor: isRatioMet ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                            color: isRatioMet ? 'var(--color-success)' : '#b45309'
-                                        }}>
-                                            {isRatioMet ? <Check size={16} /> : <AlertCircle size={16} />}
-                                            Ratio: {commentarySentences} / {evidenceSentences * 2} Sentences
+                                        <div style={{ backgroundColor: '#f9fafb', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontStyle: 'italic', fontFamily: 'var(--font-serif)', fontSize: '1.1rem', lineHeight: 1.6, color: 'var(--color-text)' }}>
+                                            <Quote size={24} style={{ color: 'var(--color-accent)', marginBottom: '0.5rem', opacity: 0.5 }} />
+                                            "{paragraph.evidence}"
                                         </div>
                                     </div>
 
-                                    <textarea
-                                        value={paragraph.commentary}
-                                        onChange={handleCommentaryChange}
-                                        placeholder="Explain HOW the evidence supports your claim and WHY it matters to the audience..."
-                                        style={{
-                                            width: '100%',
-                                            minHeight: '200px',
-                                            padding: '1.5rem',
-                                            borderRadius: 'var(--radius-md)',
-                                            border: `1px solid ${isRatioMet ? 'var(--color-success)' : 'var(--color-border)'}`,
-                                            fontSize: '1.1rem',
-                                            lineHeight: 1.6,
-                                            fontFamily: 'var(--font-sans)',
-                                            resize: 'vertical',
-                                            outline: 'none',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    />
+                                    <div className="card" style={{ padding: '2rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>3</div>
+                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--color-text-muted)' }}>Commentary</h3>
+                                            </div>
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+                                                padding: '0.25rem 0.75rem', borderRadius: '999px',
+                                                backgroundColor: isRatioMet ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                                color: isRatioMet ? 'var(--color-success)' : '#b45309'
+                                            }}>
+                                                {isRatioMet ? <Check size={16} /> : <AlertCircle size={16} />}
+                                                Ratio: {commentarySentences} / {evidenceSentences * 2} Sentences
+                                            </div>
+                                        </div>
 
-                                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-                                        <button
-                                            className="btn btn-primary"
-                                            style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
-                                            disabled={!isRatioMet}
-                                            onClick={() => onComplete(paragraph)}
-                                        >
-                                            {isRatioMet ? 'Add Paragraph to Essay' : 'Need More Commentary'}
-                                        </button>
+                                        <textarea
+                                            value={paragraph.commentary}
+                                            onChange={handleCommentaryChange}
+                                            placeholder="Explain HOW the evidence supports your claim and WHY it matters to the audience..."
+                                            style={{
+                                                width: '100%', minHeight: '200px', padding: '1.5rem', borderRadius: 'var(--radius-md)',
+                                                border: `1px solid ${isRatioMet ? 'var(--color-success)' : 'var(--color-border)'}`,
+                                                fontSize: '1.1rem', lineHeight: 1.6, fontFamily: 'var(--font-sans)', outline: 'none', resize: 'vertical'
+                                            }}
+                                        />
+
+                                        <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                            <button
+                                                className="btn btn-primary"
+                                                style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
+                                                disabled={!isRatioMet}
+                                                onClick={() => onComplete(paragraph)}
+                                            >
+                                                {isEditing ? 'Update Paragraph' : 'Add Paragraph to Essay'}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                </>
                             )}
-
                         </div>
                     </div>
                 </div>

@@ -63,6 +63,17 @@ export const EssayPage: React.FC = () => {
         } catch (e) { console.error(e); alert("Error submitting"); }
     };
 
+    const handleReorder = async (newOrder: any[]) => {
+        setParagraphs(newOrder);
+        if (isReadOnly) return;
+        if (user && id) {
+            try {
+                const subRef = doc(db, 'submissions', `${user.uid}_${id}`);
+                await setDoc(subRef, { paragraphs: newOrder }, { merge: true });
+            } catch (e) { console.error(e); }
+        }
+    };
+
     if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa' }}><Loader2 className="animate-spin" size={32} color="var(--color-primary)" /></div>;
 
     return (
@@ -89,6 +100,7 @@ export const EssayPage: React.FC = () => {
                     paragraphs={paragraphs}
                     onBack={() => navigate(-1)}
                     onSubmit={handleSubmit}
+                    onReorder={isReadOnly ? undefined : handleReorder}
                 />
             </main>
         </div>
