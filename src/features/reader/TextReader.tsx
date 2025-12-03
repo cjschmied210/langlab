@@ -10,7 +10,7 @@ import { SAMPLE_TEXT } from './data';
 import {
     Trash2, PenTool, X, ArrowLeft, Check, FileText, Layers,
     Loader2, ChevronRight, Edit2, Lock, Sparkles, AlertCircle,
-    User, Target, Users, Globe, Zap
+    User, Target, Users, Globe, Zap, Eye
 } from 'lucide-react';
 import { RHETORICAL_VERBS } from './data';
 
@@ -35,7 +35,7 @@ interface SpacecatData {
 }
 
 export const TextReader: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id, studentId } = useParams<{ id: string; studentId?: string }>(); // <--- Support studentId
     const navigate = useNavigate();
     const { user } = useAuth();
     const [textData, setTextData] = useState(SAMPLE_TEXT);
@@ -57,6 +57,10 @@ export const TextReader: React.FC = () => {
     const [showSpacecatReview, setShowSpacecatReview] = useState(false);
 
     const contentRef = useRef<HTMLDivElement>(null);
+
+    // DETERMINE TARGET USER (Self or Student)
+    const targetUserId = studentId || user?.uid;
+    const isReadOnly = !!studentId; // Disable editing if viewing a student
 
     useEffect(() => {
         const fetchAssignment = async () => {
@@ -82,9 +86,9 @@ export const TextReader: React.FC = () => {
 
     useEffect(() => {
         const checkSubmission = async () => {
-            if (!user || !id) return;
+            if (!targetUserId || !id) return; // Use targetUserId
             try {
-                const submissionRef = doc(db, 'submissions', `${user.uid}_${id}`);
+                const submissionRef = doc(db, 'submissions', `${targetUserId}_${id}`);
                 const docSnap = await getDoc(submissionRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -92,22 +96,21 @@ export const TextReader: React.FC = () => {
                         setSpacecatData(data.spacecat);
                         setPhase('annotation');
                     }
-
-
                 }
             } catch (error) { console.error(error); }
         };
         checkSubmission();
-    }, [user, id]);
+    }, [targetUserId, id]); // Depend on targetUserId
 
     useEffect(() => {
-        if (!id || !user) return;
-        const q = query(collection(db, 'annotations'), where('assignmentId', '==', id), where('userId', '==', user.uid));
+        if (!id || !targetUserId) return;
+        // Query by targetUserId
+        const q = query(collection(db, 'annotations'), where('assignmentId', '==', id), where('userId', '==', targetUserId));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             setAnnotations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Annotation)));
         });
         return () => unsubscribe();
-    }, [id, user]);
+    }, [id, targetUserId]);
 
     const getAbsoluteOffset = (container: Node, node: Node, offset: number): number => {
         const range = document.createRange();
@@ -117,7 +120,7 @@ export const TextReader: React.FC = () => {
     };
 
     const handleMouseUp = () => {
-        if (phase === 'scavenger') return;
+        if (phase === 'scavenger' || isReadOnly) return; // <--- BLOCK SELECTION IN READ ONLY
         const windowSelection = window.getSelection();
         if (!windowSelection || windowSelection.isCollapsed || !contentRef.current) {
             if (sidebarMode === 'list') setSelection(null);
@@ -138,6 +141,7 @@ export const TextReader: React.FC = () => {
         setSidebarMode('create'); setCreateStep('commentary');
     };
     const handleSaveAnnotation = async () => {
+        if (isReadOnly) return; // Block save
         if (!selection || !selectedVerb || !user || !id) return;
         try {
             if (editingAnnotationId) {
@@ -154,6 +158,7 @@ export const TextReader: React.FC = () => {
         } catch (error) { console.error(error); }
     };
     const handleDeleteAnnotation = async (annotationId: string) => {
+        if (isReadOnly) return; // Block delete
         if (!confirm("Delete?")) return;
         try { await deleteDoc(doc(db, 'annotations', annotationId)); } catch (error) { console.error(error); }
     };
@@ -225,12 +230,14 @@ export const TextReader: React.FC = () => {
     };
 
     const handleSpacecatChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        if (isReadOnly) return;
         const { name, value } = e.target;
         setSpacecatData(prev => ({ ...prev, [name]: value }));
         setValidationError(null);
     };
 
     const validateSpacecat = async () => {
+        if (isReadOnly) { setPhase('annotation'); return; } // Skip validation in read only
         setIsValidating(true); setValidationError(null);
         const { speaker, purpose, audience, context, exigence } = spacecatData;
         if (speaker.length < 3 || purpose.length < 5 || audience.length < 3 || context.length < 10 || exigence.length < 10) {
@@ -249,6 +256,13 @@ export const TextReader: React.FC = () => {
 
     return (
         <div className="flex gap-md" style={{ height: 'calc(100vh - 8rem)', overflow: 'hidden', position: 'relative' }}>
+            {/* Teacher Review Banner */}
+            {isReadOnly && (
+                <div className="absolute top-0 left-0 right-0 bg-amber-50 border-b border-amber-200 p-2 text-center z-50 text-xs font-bold text-amber-800 flex items-center justify-center gap-2">
+                    <Eye size={14} /> Viewing Student Work (Read Only)
+                </div>
+            )}
+
             {showSpacecatReview && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -283,7 +297,7 @@ export const TextReader: React.FC = () => {
                 </div>
             )}
 
-            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '1rem' }} className="reader-scroll">
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '1rem', marginTop: isReadOnly ? '2rem' : '0' }} className="reader-scroll">
                 <div style={{ maxWidth: '700px', margin: '0 auto', paddingBottom: '4rem' }}>
                     <header className="mb-lg text-center">
                         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{textData.title}</h1>
@@ -297,7 +311,8 @@ export const TextReader: React.FC = () => {
 
             <div style={{
                 width: '320px', minWidth: '320px', borderLeft: '1px solid var(--color-border)', padding: '1.5rem',
-                overflowY: 'auto', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-surface)', boxSizing: 'border-box'
+                overflowY: 'auto', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-surface)', boxSizing: 'border-box',
+                marginTop: isReadOnly ? '2rem' : '0'
             }}>
                 {phase === 'scavenger' ? (
                     <div className="flex flex-col h-full">
@@ -323,9 +338,9 @@ export const TextReader: React.FC = () => {
                                     </label>
                                     <div className="px-md pb-md">
                                         {field.isArea ? (
-                                            <textarea id={field.id} name={field.id} value={spacecatData[field.id as keyof SpacecatData]} onChange={handleSpacecatChange} placeholder={field.placeholder} rows={2} className="w-full bg-transparent border-none outline-none focus:ring-0 p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans resize-none shadow-none appearance-none leading-relaxed" />
+                                            <textarea id={field.id} name={field.id} value={spacecatData[field.id as keyof SpacecatData]} onChange={handleSpacecatChange} placeholder={field.placeholder} rows={2} disabled={isReadOnly} className="w-full bg-transparent border-none outline-none focus:ring-0 p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans resize-none shadow-none appearance-none leading-relaxed" />
                                         ) : (
-                                            <input id={field.id} type="text" name={field.id} value={spacecatData[field.id as keyof SpacecatData]} onChange={handleSpacecatChange} placeholder={field.placeholder} className="w-full bg-transparent border-none outline-none focus:ring-0 p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans resize-none shadow-none appearance-none" />
+                                            <input id={field.id} type="text" name={field.id} value={spacecatData[field.id as keyof SpacecatData]} onChange={handleSpacecatChange} placeholder={field.placeholder} disabled={isReadOnly} className="w-full bg-transparent border-none outline-none focus:ring-0 p-0 text-sm font-serif text-foreground placeholder:text-muted/50 placeholder:font-sans resize-none shadow-none appearance-none" />
                                         )}
                                     </div>
                                 </div>
@@ -334,7 +349,7 @@ export const TextReader: React.FC = () => {
                         </div>
                         <div className="mt-lg pt-md border-t border-border">
                             <button onClick={validateSpacecat} disabled={isValidating} className="btn btn-primary w-full py-md text-base font-medium shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-sm">
-                                {isValidating ? <><Loader2 size={20} className="animate-spin" /><span>Verifying...</span></> : <><Sparkles size={20} /><span>Unlock Text</span></>}
+                                {isValidating ? <><Loader2 size={20} className="animate-spin" /><span>Verifying...</span></> : <><Sparkles size={20} /><span>{isReadOnly ? 'View Text' : 'Unlock Text'}</span></>}
                             </button>
                         </div>
                     </div>
@@ -355,10 +370,12 @@ export const TextReader: React.FC = () => {
                                             <div key={ann.id} className="card hover:border-primary cursor-pointer transition-colors" style={{ padding: '1rem', borderLeft: '4px solid var(--color-accent)' }} onClick={() => handleScrollToAnnotation(ann.id)}>
                                                 <div className="flex justify-between items-start mb-sm">
                                                     <span style={{ backgroundColor: 'var(--color-primary)', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, textTransform: 'uppercase' }}>{ann.verb}</span>
-                                                    <div className="flex items-center gap-xs">
-                                                        <button onClick={(e) => { e.stopPropagation(); handleEditAnnotation(ann); }} className="p-1 hover:bg-muted/20 rounded text-muted hover:text-primary transition-colors" title="Edit"><Edit2 size={14} /></button>
-                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteAnnotation(ann.id); }} className="p-1 hover:bg-muted/20 rounded text-muted hover:text-destructive transition-colors" title="Delete"><Trash2 size={14} /></button>
-                                                    </div>
+                                                    {!isReadOnly && (
+                                                        <div className="flex items-center gap-xs">
+                                                            <button onClick={(e) => { e.stopPropagation(); handleEditAnnotation(ann); }} className="p-1 hover:bg-muted/20 rounded text-muted hover:text-primary transition-colors" title="Edit"><Edit2 size={14} /></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteAnnotation(ann.id); }} className="p-1 hover:bg-muted/20 rounded text-muted hover:text-destructive transition-colors" title="Delete"><Trash2 size={14} /></button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'var(--color-text-muted)', borderLeft: '2px solid var(--color-border)', paddingLeft: '0.5rem', marginBottom: '0.5rem' }}>"{ann.text}"</div>
                                                 {ann.commentary && <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', backgroundColor: 'var(--color-background)', padding: '0.5rem', borderRadius: '4px' }}><span style={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>Effect:</span>{ann.commentary}</div>}
@@ -371,11 +388,15 @@ export const TextReader: React.FC = () => {
                                     <button className="btn btn-outline text-success border-success hover:bg-success/10" style={{ width: '100%' }} onClick={() => setShowSpacecatReview(true)}>
                                         <Check size={18} style={{ marginRight: '0.5rem' }} /> Context Analyzed
                                     </button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/thesis`)}>
-                                        <PenTool size={18} style={{ marginRight: '0.5rem' }} /> 1. Build Thesis
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(isReadOnly ? `/teacher/review/${id}/${studentId}/thesis` : `/assignment/${id}/thesis`)}>
+                                        <PenTool size={18} style={{ marginRight: '0.5rem' }} /> {isReadOnly ? 'View Thesis' : '1. Build Thesis'}
                                     </button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/paragraphs`)} disabled={annotations.length === 0}><FileText size={18} style={{ marginRight: '0.5rem' }} /> 2. Build Paragraphs</button>
-                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(`/assignment/${id}/essay`)}><Layers size={18} style={{ marginRight: '0.5rem' }} /> 3. Final Assembly</button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(isReadOnly ? `/teacher/review/${id}/${studentId}/paragraphs` : `/assignment/${id}/paragraphs`)} disabled={annotations.length === 0}>
+                                        <FileText size={18} style={{ marginRight: '0.5rem' }} /> {isReadOnly ? 'View Paragraphs' : '2. Build Paragraphs'}
+                                    </button>
+                                    <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => navigate(isReadOnly ? `/teacher/review/${id}/${studentId}/essay` : `/assignment/${id}/essay`)}>
+                                        <Layers size={18} style={{ marginRight: '0.5rem' }} /> {isReadOnly ? 'View Essay' : '3. Final Assembly'}
+                                    </button>
                                 </div>
                             </>
                         ) : (

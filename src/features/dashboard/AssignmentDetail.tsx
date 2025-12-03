@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ArrowLeft, Calendar, Clock, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle, AlertCircle, FileText, Eye } from 'lucide-react';
 import type { Assignment } from '../../types/class';
 
 interface StudentProgress {
@@ -157,9 +157,17 @@ export const AssignmentDetail: React.FC = () => {
                                         )}
                                     </td>
                                     <td className="p-md text-right">
-                                        <button className="btn btn-outline btn-sm">
-                                            Grade / Feedback
-                                        </button>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => navigate(`/teacher/review/${assignmentId}/${student.studentId}/reader`)}
+                                                className="btn btn-outline btn-sm flex items-center gap-2"
+                                            >
+                                                <Eye size={14} /> View Work
+                                            </button>
+                                            <button className="btn btn-outline btn-sm">
+                                                Grade / Feedback
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))

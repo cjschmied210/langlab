@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ArrowLeft, BookOpen, Layout, GripVertical, ArrowRight, Save, Loader2, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Layout, GripVertical, ArrowRight, Save, Loader2, Sparkles, X, Eye } from 'lucide-react';
 import { RHETORICAL_VERBS } from '../reader/data';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -31,9 +31,13 @@ const toGerund = (verb: string) => {
 };
 
 export const ThesisPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id, studentId } = useParams<{ id: string; studentId?: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
+
+    // DETERMINE MODE
+    const targetUserId = studentId || user?.uid;
+    const isReadOnly = !!studentId;
 
     const [loading, setLoading] = useState(true);
     const [assignmentTitle, setAssignmentTitle] = useState('');
@@ -45,7 +49,7 @@ export const ThesisPage: React.FC = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!id || !user) return;
+            if (!id || !targetUserId) return;
             try {
                 // 1. Assignment
                 const assignSnap = await getDoc(doc(db, 'assignments', id));
@@ -59,14 +63,14 @@ export const ThesisPage: React.FC = () => {
                 const q = query(
                     collection(db, 'annotations'),
                     where('assignmentId', '==', id),
-                    where('userId', '==', user.uid)
+                    where('userId', '==', targetUserId)
                 );
                 const annSnap = await getDocs(q);
                 const verbs = annSnap.docs.map(d => d.data().verb);
                 setCollectedVerbs(Array.from(new Set(verbs)));
 
                 // 3. Check for existing thesis work
-                const subRef = doc(db, 'submissions', `${user.uid}_${id}`);
+                const subRef = doc(db, 'submissions', `${targetUserId}_${id}`);
                 const subSnap = await getDoc(subRef);
                 if (subSnap.exists()) {
                     const data = subSnap.data();
@@ -79,10 +83,11 @@ export const ThesisPage: React.FC = () => {
             } catch (error) { console.error(error); setLoading(false); }
         };
         fetchData();
-    }, [id, user]);
+    }, [id, targetUserId]);
 
     // ... [Drag Handlers & getVerbStyle remain exactly the same] ...
     const handleDragStart = (e: React.DragEvent, verb: string) => {
+        if (isReadOnly) return;
         e.dataTransfer.setData('text/plain', verb);
         setIsDragging(true);
     };
@@ -99,6 +104,11 @@ export const ThesisPage: React.FC = () => {
     };
 
     const handleSave = async () => {
+        if (isReadOnly) {
+            navigate(`/teacher/review/${id}/${studentId}/paragraphs`);
+            return;
+        }
+
         if (!user || !id) return;
         setIsSaving(true);
         try {
@@ -206,7 +216,7 @@ export const ThesisPage: React.FC = () => {
                             The Architect's Desk
                         </h1>
                         <p style={{ fontSize: '0.8rem', margin: 0, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Drafting for: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{assignmentTitle}</span>
+                            {isReadOnly ? <span className="flex items-center gap-2 text-amber-600"><Eye size={12} /> Reviewing Student Work</span> : <>Drafting for: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{assignmentTitle}</span></>}
                         </p>
                     </div>
                 </div>
@@ -216,12 +226,12 @@ export const ThesisPage: React.FC = () => {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={!thesis.verb1 || !thesis.verb2 || !thesis.purpose || isSaving}
+                        disabled={(!isReadOnly && (!thesis.verb1 || !thesis.verb2 || !thesis.purpose)) || isSaving}
                         className="btn btn-primary"
-                        style={{ fontSize: '0.8rem', opacity: (!thesis.verb1 || !thesis.verb2 || !thesis.purpose) ? 0.5 : 1 }}
+                        style={{ fontSize: '0.8rem', opacity: (!isReadOnly && (!thesis.verb1 || !thesis.verb2 || !thesis.purpose)) ? 0.5 : 1 }}
                     >
-                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} style={{ marginRight: '0.5rem' }} />}
-                        {isSaving ? 'Saving...' : 'Save Thesis'}
+                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : (isReadOnly ? <ArrowRight size={16} style={{ marginRight: '0.5rem' }} /> : <Save size={16} style={{ marginRight: '0.5rem' }} />)}
+                        {isSaving ? 'Saving...' : (isReadOnly ? 'Next: Paragraphs' : 'Save Thesis')}
                     </button>
                 </div>
             </header>
@@ -304,6 +314,7 @@ export const ThesisPage: React.FC = () => {
                                         value={thesis.purpose}
                                         onChange={(e) => setThesis(p => ({ ...p, purpose: e.target.value }))}
                                         placeholder="convey what message to the audience?"
+                                        disabled={isReadOnly}
                                         style={{ flex: 1, backgroundColor: 'transparent', border: 'none', borderBottom: '2px solid var(--color-border)', outline: 'none', padding: '0.5rem', fontFamily: 'var(--font-serif)', fontSize: '1.25rem', color: 'var(--color-text)' }}
                                         autoComplete="off"
                                     />

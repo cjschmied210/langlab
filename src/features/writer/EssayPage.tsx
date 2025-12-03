@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ArrowLeft, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Eye } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { EssayAssembler } from './EssayAssembler';
 
@@ -15,9 +15,14 @@ const toGerund = (verb: string) => {
 };
 
 export const EssayPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id, studentId } = useParams<{ id: string; studentId?: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
+
+    // DETERMINE MODE
+    const targetUserId = studentId || user?.uid;
+    const isReadOnly = !!studentId;
+
     const [loading, setLoading] = useState(true);
     const [thesis, setThesis] = useState('');
     const [paragraphs, setParagraphs] = useState<any[]>([]);
@@ -25,12 +30,12 @@ export const EssayPage: React.FC = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!id || !user) return;
+            if (!id || !targetUserId) return;
             try {
                 const assignSnap = await getDoc(doc(db, 'assignments', id));
                 if (assignSnap.exists()) setAssignmentTitle(assignSnap.data().title);
 
-                const subRef = doc(db, 'submissions', `${user.uid}_${id}`);
+                const subRef = doc(db, 'submissions', `${targetUserId}_${id}`);
                 const subSnap = await getDoc(subRef);
                 if (subSnap.exists()) {
                     const data = subSnap.data();
@@ -45,9 +50,10 @@ export const EssayPage: React.FC = () => {
             } catch (error) { console.error(error); setLoading(false); }
         };
         fetchData();
-    }, [id, user]);
+    }, [id, targetUserId]);
 
     const handleSubmit = async () => {
+        if (isReadOnly) return;
         if (!user || !id) return;
         try {
             const subRef = doc(db, 'submissions', `${user.uid}_${id}`);
@@ -71,7 +77,7 @@ export const EssayPage: React.FC = () => {
                             <FileText size={20} /> Final Assembly
                         </h1>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                            Drafting for: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{assignmentTitle}</span>
+                            {isReadOnly ? <span className="flex items-center gap-2 text-amber-600"><Eye size={12} /> Reviewing Student Work</span> : <>Drafting for: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{assignmentTitle}</span></>}
                         </p>
                     </div>
                 </div>

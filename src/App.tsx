@@ -83,6 +83,24 @@ function App() {
               }
             />
 
+            {/* TEACHER REVIEW ROUTES - Mirroring the Student Workflow */}
+            <Route
+              path="teacher/review/:id/:studentId/reader"
+              element={<ProtectedRoute allowedRoles={['teacher']}><TextReader /></ProtectedRoute>}
+            />
+            <Route
+              path="teacher/review/:id/:studentId/thesis"
+              element={<ProtectedRoute allowedRoles={['teacher']}><ThesisPage /></ProtectedRoute>}
+            />
+            <Route
+              path="teacher/review/:id/:studentId/paragraphs"
+              element={<ProtectedRoute allowedRoles={['teacher']}><ParagraphPage /></ProtectedRoute>}
+            />
+            <Route
+              path="teacher/review/:id/:studentId/essay"
+              element={<ProtectedRoute allowedRoles={['teacher']}><EssayPage /></ProtectedRoute>}
+            />
+
             <Route
               path="student/dashboard"
               element={
