@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ArrowLeft, Calendar, CheckCircle, AlertCircle, FileText, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle, AlertCircle, FileText, Eye, Loader2, Trash2 } from 'lucide-react';
 import type { Assignment } from '../../types/class';
 
 interface StudentProgress {
@@ -18,6 +18,19 @@ export const AssignmentDetail: React.FC = () => {
     const [assignment, setAssignment] = useState<Assignment | null>(null);
     const [students, setStudents] = useState<StudentProgress[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const handleDelete = async () => {
+        if (!assignmentId) return;
+        if (window.confirm('Are you sure you want to delete this assignment? This cannot be undone.')) {
+            try {
+                await deleteDoc(doc(db, 'assignments', assignmentId));
+                navigate('/teacher/dashboard');
+            } catch (error) {
+                console.error('Error deleting assignment:', error);
+                alert('Failed to delete assignment');
+            }
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -75,13 +88,22 @@ export const AssignmentDetail: React.FC = () => {
 
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '3rem 2rem' }}>
-            <button
-                onClick={() => navigate('/teacher/dashboard')}
-                className="btn btn-ghost"
-                style={{ padding: '0.5rem 0', marginBottom: '1.5rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-                <ArrowLeft size={20} /> Back to Dashboard
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <button
+                    onClick={() => navigate('/teacher/dashboard')}
+                    className="btn btn-ghost"
+                    style={{ padding: '0.5rem 0', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                    <ArrowLeft size={20} /> Back to Dashboard
+                </button>
+                <button
+                    onClick={handleDelete}
+                    className="btn btn-ghost"
+                    style={{ color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}
+                >
+                    <Trash2 size={18} /> Delete Assignment
+                </button>
+            </div>
 
             <header style={{ marginBottom: '2rem', padding: '2rem', backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
                 <div>

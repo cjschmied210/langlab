@@ -28,7 +28,11 @@ service cloud.firestore {
     match /classes/{classId} {
       // Teachers can create and update their own classes
       allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && resource.data.teacherId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.teacherId == request.auth.uid || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds']))
+      );
+      allow delete: if isAuthenticated() && resource.data.teacherId == request.auth.uid;
       // Allow read if authenticated (for joining and dashboard lists)
       allow read: if isAuthenticated();
     }
