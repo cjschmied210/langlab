@@ -4,7 +4,9 @@ import {
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -15,6 +17,8 @@ interface AuthContextType {
     userProfile: UserProfile | null;
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
+    loginWithEmail: (email: string, pass: string) => Promise<void>;
+    signupWithEmail: (email: string, pass: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshProfile: () => Promise<void>;
 }
@@ -49,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         let mounted = true;
-
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (mounted) {
                 setUser(currentUser);
@@ -61,20 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setLoading(false);
             }
         });
-
-        // Safety timeout for demo/offline mode
-        const timer = setTimeout(() => {
-            if (mounted && loading) {
-                console.warn("Auth listener timed out (likely due to invalid config), defaulting to signed out.");
-                setLoading(false);
-            }
-        }, 4000); // Increased timeout to account for Firestore fetch
-
-        return () => {
-            mounted = false;
-            unsubscribe();
-            clearTimeout(timer);
-        };
+        return () => { mounted = false; unsubscribe(); };
     }, []);
 
     const signInWithGoogle = async () => {
@@ -86,6 +76,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw error;
         }
     };
+
+    // --- NEW FUNCTIONS ---
+    const loginWithEmail = async (email: string, pass: string) => {
+        await signInWithEmailAndPassword(auth, email, pass);
+    };
+
+    const signupWithEmail = async (email: string, pass: string) => {
+        await createUserWithEmailAndPassword(auth, email, pass);
+    };
+    // ---------------------
 
     const logout = async () => {
         try {
@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, userProfile, loading, signInWithGoogle, logout, refreshProfile }}>
+        <AuthContext.Provider value={{ user, userProfile, loading, signInWithGoogle, loginWithEmail, signupWithEmail, logout, refreshProfile }}>
             {!loading && children}
         </AuthContext.Provider>
     );

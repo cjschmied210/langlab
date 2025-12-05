@@ -1,17 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, User, Eye, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { JoinClassModal } from '../features/dashboard/components/JoinClassModal';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export const Layout: React.FC = () => {
     const { user, userProfile } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const [showJoinModal, setShowJoinModal] = useState(false);
+    const [hasClasses, setHasClasses] = useState(false);
 
     const isTeacher = userProfile?.role === 'teacher';
     const isStudentView = location.pathname.startsWith('/student');
+
+    // Check if student has joined any classes
+    useEffect(() => {
+        const checkEnrollment = async () => {
+            // Only check for students (or teachers in student view)
+            if (user && !isTeacher) {
+                try {
+                    const q = query(
+                        collection(db, 'classes'),
+                        where('studentIds', 'array-contains', user.uid)
+                    );
+                    const snapshot = await getDocs(q);
+                    setHasClasses(!snapshot.empty);
+                } catch (error) {
+                    console.error("Error checking enrollment:", error);
+                }
+            }
+        };
+
+        checkEnrollment();
+    }, [user, isTeacher]);
+
+    // Helper to get the display name safely
+    const getDisplayName = () => {
+        if (userProfile?.displayName) return userProfile.displayName.split(' ')[0];
+        if (user?.displayName) return user.displayName.split(' ')[0];
+        return 'User';
+    };
 
     const getDashboardLink = () => {
         if (!user) return '/login';
@@ -29,7 +60,6 @@ export const Layout: React.FC = () => {
     };
 
     const handleClassJoined = () => {
-        // Reload to refresh dashboard data since we can't easily trigger a refresh from here
         window.location.reload();
     };
 
@@ -55,7 +85,8 @@ export const Layout: React.FC = () => {
                                     </button>
                                 )}
 
-                                {(isStudentView || !isTeacher) && (
+                                {/* FIXED LOGIC: Show if (Student OR StudentView) AND (Not Enrolled) */}
+                                {((!isTeacher || isStudentView) && !hasClasses) && (
                                     <button
                                         onClick={() => setShowJoinModal(true)}
                                         className="btn btn-ghost"
@@ -69,7 +100,7 @@ export const Layout: React.FC = () => {
                                 <Link to={getDashboardLink()} style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Dashboard</Link>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                                     <User size={16} />
-                                    <span>{user.displayName?.split(' ')[0] || 'User'}</span>
+                                    <span>{getDisplayName()}</span>
                                 </div>
                             </>
                         ) : (

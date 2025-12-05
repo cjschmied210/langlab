@@ -4,15 +4,21 @@ import { useNavigate } from 'react-router-dom';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { UserRole } from '../types/user';
-import { GraduationCap, School, Loader2 } from 'lucide-react';
+import { GraduationCap, School, Loader2, User } from 'lucide-react';
 
 export const Onboarding: React.FC = () => {
     const { user, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // Initialize with existing name (from Google) or empty (for Email)
+    const [displayName, setDisplayName] = useState(user?.displayName || '');
 
     const handleRoleSelect = async (role: UserRole) => {
         if (!user) return;
+        if (!displayName.trim()) {
+            alert("Please enter your name.");
+            return;
+        }
         setIsSubmitting(true);
 
         try {
@@ -20,7 +26,7 @@ export const Onboarding: React.FC = () => {
             await setDoc(userRef, {
                 uid: user.uid,
                 email: user.email,
-                displayName: user.displayName || 'User',
+                displayName: displayName.trim(), // <--- Use the input value
                 photoURL: user.photoURL,
                 role: role,
                 createdAt: serverTimestamp()
@@ -28,7 +34,6 @@ export const Onboarding: React.FC = () => {
 
             await refreshProfile();
 
-            // Redirect based on role
             if (role === 'teacher') {
                 navigate('/teacher/dashboard');
             } else {
@@ -45,14 +50,31 @@ export const Onboarding: React.FC = () => {
         <div className="min-h-screen bg-background flex flex-col items-center justify-center p-md">
             <div className="max-w-4xl w-full text-center">
                 <h1 className="text-4xl font-serif font-bold text-primary mb-lg">Welcome to LangLab</h1>
-                <p className="text-xl text-muted mb-2xl">Tell us how you'll be using the platform.</p>
+
+                {/* NAME INPUT SECTION */}
+                <div className="max-w-xs mx-auto mb-xl">
+                    <label className="block text-sm font-bold text-muted uppercase mb-2">What should we call you?</label>
+                    <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                        <input
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            placeholder="e.g. John D."
+                            className="w-full pl-10 p-3 border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none text-center font-medium"
+                            autoFocus
+                        />
+                    </div>
+                </div>
+
+                <p className="text-xl text-muted mb-lg">Select your role to get started:</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-xl">
                     {/* Student Card */}
                     <button
                         onClick={() => handleRoleSelect('student')}
-                        disabled={isSubmitting}
-                        className="card p-2xl flex flex-col items-center hover:border-primary hover:shadow-lg transition-all group text-left"
+                        disabled={isSubmitting || !displayName.trim()}
+                        className="card p-2xl flex flex-col items-center hover:border-primary hover:shadow-lg transition-all group text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <div className="bg-primary/10 p-xl rounded-full mb-lg group-hover:bg-primary/20 transition-colors">
                             <GraduationCap size={48} className="text-primary" />
@@ -66,8 +88,8 @@ export const Onboarding: React.FC = () => {
                     {/* Teacher Card */}
                     <button
                         onClick={() => handleRoleSelect('teacher')}
-                        disabled={isSubmitting}
-                        className="card p-2xl flex flex-col items-center hover:border-primary hover:shadow-lg transition-all group text-left"
+                        disabled={isSubmitting || !displayName.trim()}
+                        className="card p-2xl flex flex-col items-center hover:border-primary hover:shadow-lg transition-all group text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <div className="bg-primary/10 p-xl rounded-full mb-lg group-hover:bg-primary/20 transition-colors">
                             <School size={48} className="text-primary" />

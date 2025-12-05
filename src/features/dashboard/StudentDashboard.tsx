@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Class, Assignment } from '../../types/class';
 
 export const StudentDashboard: React.FC = () => {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth(); // <--- Added userProfile here
     const navigate = useNavigate();
     const [enrolledClasses, setEnrolledClasses] = useState<Class[]>([]);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -102,6 +102,9 @@ export const StudentDashboard: React.FC = () => {
         return p > 0 && p < 100;
     }).length;
 
+    // Use profile name first, then fallback to user name, then generic
+    const displayName = userProfile?.displayName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student';
+
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '3rem 1rem' }}>
 
@@ -112,7 +115,7 @@ export const StudentDashboard: React.FC = () => {
                         <Sparkles size={16} /> Student Dashboard
                     </div>
                     <h1 style={{ fontSize: '2.5rem', color: 'var(--color-primary)', margin: 0, lineHeight: 1.2 }}>
-                        {getGreeting()}, {user?.displayName?.split(' ')[0]}
+                        {getGreeting()}, {displayName}
                     </h1>
                 </div>
 

@@ -65,60 +65,115 @@ export const JoinClassModal: React.FC<JoinClassModalProps> = ({ onClose, onClass
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">
-            <div className="card max-w-md w-full p-xl relative animate-in fade-in zoom-in duration-200">
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent dark overlay
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            backdropFilter: 'blur(2px)'
+        }}>
+            <div className="card" style={{
+                width: '100%',
+                maxWidth: '480px',
+                padding: '2rem',
+                position: 'relative',
+                animation: 'fade-in 0.2s ease-out'
+            }}>
                 <button
                     onClick={onClose}
-                    className="absolute top-md right-md text-muted hover:text-primary transition-colors"
+                    style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-text-muted)'
+                    }}
                 >
                     <X size={20} />
                 </button>
 
-                <h2 className="text-2xl font-bold text-primary mb-lg">Join a Class</h2>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '1.5rem', marginTop: 0 }}>
+                    Join a Class
+                </h2>
 
                 {success ? (
-                    <div className="text-center py-lg">
-                        <div className="w-16 h-16 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto mb-md">
+                    <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                        <div style={{ width: '64px', height: '64px', backgroundColor: '#ecfdf5', color: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
                             <CheckCircle size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-success mb-sm">Successfully Joined!</h3>
-                        <p className="text-muted">Redirecting you to the dashboard...</p>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981', margin: '0 0 0.5rem 0' }}>Successfully Joined!</h3>
+                        <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>Redirecting you to the dashboard...</p>
                     </div>
                 ) : (
-                    <form onSubmit={handleJoin} className="flex flex-col gap-md">
+                    <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div>
-                            <label className="block text-sm font-semibold text-muted mb-xs">Class Code</label>
-                            <div className="relative">
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
+                                Class Code
+                            </label>
+                            <div style={{ position: 'relative' }}>
                                 <input
                                     type="text"
                                     value={joinCode}
                                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                                     placeholder="e.g. X7K9P2"
-                                    className="w-full p-sm pl-xl border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono tracking-wider uppercase"
                                     maxLength={6}
                                     autoFocus
                                     required
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem 1rem 0.75rem 2.5rem',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 'var(--radius-md)',
+                                        fontSize: '1.2rem',
+                                        fontFamily: 'monospace',
+                                        letterSpacing: '0.1em',
+                                        textTransform: 'uppercase',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
                                 />
-                                <Search size={18} className="absolute left-sm top-1/2 -translate-y-1/2 text-muted" />
+                                <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                             </div>
-                            <p className="text-xs text-muted mt-xs">Ask your teacher for the 6-character join code.</p>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
+                                Ask your teacher for the 6-character join code.
+                            </p>
                         </div>
 
                         {error && (
-                            <div className="p-sm bg-error/10 text-error rounded-md flex items-center gap-sm text-sm">
+                            <div style={{ padding: '0.75rem', backgroundColor: '#fef2f2', color: 'var(--color-error)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #fee2e2' }}>
                                 <AlertCircle size={16} />
                                 {error}
                             </div>
                         )}
 
-                        <div className="flex justify-end gap-sm mt-md">
-                            <button type="button" onClick={onClose} className="btn btn-ghost" disabled={isSubmitting}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="btn btn-ghost"
+                                disabled={isSubmitting}
+                                style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                            >
                                 Cancel
                             </button>
-                            <button type="submit" className="btn btn-primary" disabled={isSubmitting || joinCode.length < 6}>
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={isSubmitting || joinCode.length < 6}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: (isSubmitting || joinCode.length < 6) ? 0.7 : 1 }}
+                            >
                                 {isSubmitting ? (
                                     <>
-                                        <Loader2 size={18} className="animate-spin mr-sm" />
+                                        <Loader2 size={18} className="animate-spin" />
                                         Joining...
                                     </>
                                 ) : (
